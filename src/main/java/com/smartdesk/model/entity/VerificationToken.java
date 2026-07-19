@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "verification_tokens")
+@Table(name = "verification_tokens", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,10 +22,28 @@ public class VerificationToken {
     @Column(nullable = false, unique = true)
     private String token;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(nullable = false)
+    private String email;
+
+    @Column
+    private String name;
+
+    @Column
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TokenType type;
 
     @Column(name = "expiry_date", nullable = false)
     private LocalDateTime expiryDate;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean used = false;
+    
+    public enum TokenType {
+        REGISTRATION,
+        RECOVERY
+    }
 }

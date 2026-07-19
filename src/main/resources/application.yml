@@ -9,22 +9,30 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    open-in-view: false
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-  mail:
-    host: ${MAIL_HOST:sandbox.smtp.mailtrap.io}
-    port: ${MAIL_PORT:2525}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
 
 server:
   port: ${PORT:8080}
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 15MB
+
+jwt:
+  secret: ${JWT_SECRET:smartdesk_super_secret_key_needs_to_be_long_enough_for_hs256_alg_which_is_256_bits}
+  expiration: ${JWT_EXPIRATION:3600000}
+
+resend:
+  api:
+    key: ${RESEND_API_KEY:re_123456789}
+  from:
+    email: ${RESEND_FROM_EMAIL:onboarding@resend.dev}
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:gemini_fake_key_123}

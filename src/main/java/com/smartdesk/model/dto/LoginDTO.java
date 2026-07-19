@@ -1,13 +1,15 @@
 package com.smartdesk.model.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class ActivationDTO {
+public class LoginDTO {
+    @Email
     @NotBlank
-    private String token;
+    private String email;
 
     @NotBlank
-    private String companyName;
+    private String password;
 }

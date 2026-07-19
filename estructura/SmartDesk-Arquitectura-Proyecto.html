@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartDesk — Arquitectura del Proyecto SaaS</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-light: #eff6ff;
+    --primary-dark: #1d4ed8;
+    --accent: #7c3aed;
+    --accent-light: #f5f3ff;
+    --success: #059669;
+    --success-light: #ecfdf5;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow: 0 2px 8px rgba(0,0,0,0.10);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #f0f4f8;
+    color: var(--gray-800);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #4f46e5 100%);
+    color: white;
+    padding: 48px 40px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 300px; height: 300px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: 30%;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+  }
+  .header h1 {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header h1 span { color: #93c5fd; }
+  .header-sub {
+    font-size: 16px;
+    color: rgba(255,255,255,0.75);
+    max-width: 600px;
+    margin-bottom: 28px;
+  }
+  .header-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .header-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .header-meta-item .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+  }
+
+  /* ── LAYOUT ── */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .content { padding: 36px 40px; }
+
+  /* ── TOC ── */
+  .toc-bar {
+    background: white;
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+  .toc-inner {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 40px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .toc-inner::-webkit-scrollbar { display: none; }
+  .toc-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-500);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .toc-link:hover { color: var(--primary); border-color: var(--primary); }
+  .toc-num {
+    width: 20px; height: 20px;
+    background: var(--gray-100);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    margin-bottom: 48px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--gray-100);
+  }
+  .section-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .section-title { font-size: 22px; font-weight: 700; color: var(--gray-900); }
+  .section-desc { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+  .section-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gray-400);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .card-pad { padding: 20px 24px; }
+  .card-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+
+  /* ── TECH STACK ── */
+  .tech-item {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .tech-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .tech-name { font-size: 14px; font-weight: 600; color: var(--gray-900); }
+  .tech-desc { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .tech-role {
+    display: inline-block;
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  /* ── DATABASE TABLES ── */
+  .db-schema {
+    background: #0f172a;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .db-schema-header {
+    background: #1e293b;
+    padding: 12px 20px;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .db-schema-title { color: #94a3b8; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+  .db-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .db-tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0; }
+  .db-table {
+    border-right: 1px solid #1e293b;
+    padding: 16px 0;
+  }
+  .db-table:last-child { border-right: none; }
+  .db-table-name {
+    color: #38bdf8;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0 16px 10px;
+    border-bottom: 1px solid #1e293b;
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .db-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 16px;
+    gap: 8px;
+  }
+  .db-field:hover { background: #1e293b; }
+  .db-field-name { color: #e2e8f0; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+  .db-field-type { color: #f97316; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+  .db-pk { color: #fbbf24; font-size: 10px; font-weight: 700; }
+  .db-fk { color: #a78bfa; font-size: 10px; font-weight: 700; }
+  .db-field-flags { display: flex; gap: 4px; align-items: center; }
+
+  /* ── SPRINT TIMELINE ── */
+  .sprint-grid {
+    display: grid;
+    grid-template-columns: 80px repeat(10, 1fr);
+    gap: 0;
+  }
+  .sprint-header {
+    background: var(--gray-800);
+    color: white;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    border-right: 1px solid var(--gray-700);
+  }
+  .sprint-label {
+    background: var(--gray-100);
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-700);
+    border-right: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+  }
+  .sprint-cell {
+    padding: 10px 6px;
+    border-right: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--gray-200);
+    text-align: center;
+    font-size: 11px;
+  }
+  .sprint-bar {
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── HU CARDS ── */
+  .hu-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .hu-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .hu-id {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .hu-title { font-size: 14px; font-weight: 600; color: var(--gray-900); margin: 4px 0; }
+  .hu-meta { font-size: 12px; color: var(--gray-500); display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .hu-sprint-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--gray-100);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-600);
+  }
+  .priority-alta {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #fef2f2; color: #dc2626;
+    border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600;
+  }
+  .priority-media {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #fffbeb; color: #d97706;
+    border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600;
+  }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow-steps {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .flow-step {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 16px 18px;
+    min-width: 160px;
+    flex: 1;
+    position: relative;
+  }
+  .flow-step + .flow-step::before {
+    content: '→';
+    position: absolute;
+    left: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    font-size: 18px;
+    font-weight: 300;
+  }
+  .flow-step-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: white;
+    margin-bottom: 10px;
+  }
+  .flow-step-title { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+  .flow-step-sub { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+
+  /* ── ARCH LAYER ── */
+  .arch-layer {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .arch-layer-header {
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .arch-layer-body {
+    background: white;
+    padding: 14px 16px;
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .arch-chip {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-700);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .arch-chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* ── CODE ── */
+  .code-block {
+    background: #0f172a;
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #e2e8f0;
+    overflow-x: auto;
+    line-height: 1.8;
+  }
+  .code-kw { color: #7dd3fc; }
+  .code-str { color: #86efac; }
+  .code-cmt { color: #64748b; }
+  .code-val { color: #fca5a5; }
+  .code-fn { color: #c4b5fd; }
+
+  /* ── BADGE / TAG ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    border-radius: 4px; padding: 2px 8px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-blue { background: #eff6ff; color: #1d4ed8; }
+  .badge-purple { background: #f5f3ff; color: #6d28d9; }
+  .badge-green { background: #ecfdf5; color: #065f46; }
+  .badge-orange { background: #fff7ed; color: #c2410c; }
+  .badge-red { background: #fef2f2; color: #991b1b; }
+  .badge-gray { background: #f3f4f6; color: #374151; }
+
+  /* ── CHECKLIST ── */
+  .checklist { list-style: none; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 13px;
+    color: var(--gray-700);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check-icon {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ── INFRA ── */
+  .infra-box {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .infra-icon { font-size: 28px; margin-bottom: 8px; }
+  .infra-name { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+  .infra-detail { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+  .arrow-down {
+    text-align: center; padding: 8px;
+    color: var(--gray-400); font-size: 20px;
+  }
+  .arrow-right-connector {
+    display: flex; align-items: center; gap: 0;
+  }
+  .connector-line {
+    flex: 1; height: 1px; background: var(--gray-300); position: relative;
+  }
+  .connector-line::after {
+    content: '▶';
+    position: absolute; right: -6px; top: -6px;
+    color: var(--gray-400); font-size: 12px;
+  }
+
+  /* ── NOTIFICATION ── */
+  .info-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    display: flex; gap: 12px; align-items: flex-start;
+    font-size: 13px; color: #1e40af;
+    margin-bottom: 16px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .content { padding: 20px 16px; }
+    .header { padding: 28px 20px; }
+    .header h1 { font-size: 26px; }
+    .toc-inner { padding: 0 16px; }
+    .sprint-grid { overflow-x: auto; }
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    body { background: white; }
+    .toc-bar { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     HEADER
+══════════════════════════════════════ -->
+<div class="header">
+  <div class="header-badge">
+    <span>📄</span>
+    Documento de Arquitectura · v1.0 · Sprint 1
+  </div>
+  <h1>SmartDesk <span>SaaS</span></h1>
+  <p class="header-sub">
+    Sistema de triaje automatizado con IA para organizaciones empresariales — Estructura técnica completa, stack tecnológico, base de datos y roadmap de desarrollo.
+  </p>
+  <div class="header-meta">
+    <div class="header-meta-item"><span class="dot"></span> B2B Multi-Tenant</div>
+    <div class="header-meta-item">🏗 Angular + Spring Boot 3</div>
+    <div class="header-meta-item">🗄 PostgreSQL (esquemas por tenant)</div>
+    <div class="header-meta-item">🤖 Google Gemini</div>
+    <div class="header-meta-item">⚡ WebSockets + FCM</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TOC
+══════════════════════════════════════ -->
+<nav class="toc-bar">
+  <div class="toc-inner">
+    <a href="#vision" class="toc-link"><span class="toc-num">1</span>Visión</a>
+    <a href="#infra" class="toc-link"><span class="toc-num">2</span>Infraestructura</a>
+    <a href="#tech" class="toc-link"><span class="toc-num">3</span>Stack</a>
+    <a href="#multitenant" class="toc-link"><span class="toc-num">4</span>Multi-Tenant</a>
+    <a href="#architecture" class="toc-link"><span class="toc-num">5</span>Arquitectura</a>
+    <a href="#database" class="toc-link"><span class="toc-num">6</span>Base de Datos</a>
+    <a href="#security" class="toc-link"><span class="toc-num">7</span>Seguridad</a>
+    <a href="#ia" class="toc-link"><span class="toc-num">8</span>IA</a>
+    <a href="#notifications" class="toc-link"><span class="toc-num">9</span>Notificaciones</a>
+    <a href="#sprints" class="toc-link"><span class="toc-num">10</span>Sprints</a>
+    <a href="#hu" class="toc-link"><span class="toc-num">11</span>Historias de Usuario</a>
+    <a href="#flow" class="toc-link"><span class="toc-num">12</span>Flujos Clave</a>
+  </div>
+</nav>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════
+     1. VISIÓN
+══════════════════════════════════════ -->
+<div class="section" id="vision">
+  <div class="section-header">
+    <div class="section-icon" style="background:#eff6ff">🎯</div>
+    <div>
+      <div class="section-num">01 · Visión del Producto</div>
+      <div class="section-title">¿Qué es SmartDesk?</div>
+      <div class="section-desc">Plataforma SaaS B2B de gestión de servicios internos con triaje automático vía IA</div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:20px">
+    <div class="card card-pad" style="border-left:4px solid #2563eb">
+      <div style="font-size:22px;margin-bottom:8px">🏢</div>
+      <div style="font-weight:700;font-size:14px;color:#1e3a5f;margin-bottom:6px">Para empresas B2B</div>
+      <div style="font-size:13px;color:#6b7280">Entornos aislados por empresa (Tenant). Cada organización tiene su propia instancia segura con datos completamente separados.</div>
+    </div>
+    <div class="card card-pad" style="border-left:4px solid #7c3aed">
+      <div style="font-size:22px;margin-bottom:8px">🤖</div>
+      <div style="font-weight:700;font-size:14px;color:#4c1d95;margin-bottom:6px">Triaje automático con IA</div>
+      <div style="font-size:13px;color:#6b7280">Google Gemini clasifica, prioriza y asigna tickets automáticamente al área correcta en menos de 5 segundos.</div>
+    </div>
+    <div class="card card-pad" style="border-left:4px solid #059669">
+      <div style="font-size:22px;margin-bottom:8px">🆓</div>
+      <div style="font-weight:700;font-size:14px;color:#064e3b;margin-bottom:6px">Modelo Freemium</div>
+      <div style="font-size:13px;color:#6b7280">Sandbox gratuito para probar el producto. Licencia B2B para empresas formales con SSO, CSV masivo y soporte avanzado.</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card card-pad">
+      <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:12px">🎭 Roles del sistema</div>
+      <ul class="checklist">
+        <li><span class="check-icon" style="background:#eff6ff;color:#2563eb">👑</span><div><strong>Administrador de Empresa</strong> — gestiona el entorno, colaboradores, áreas y configuración corporativa</div></li>
+        <li><span class="check-icon" style="background:#f5f3ff;color:#7c3aed">🔧</span><div><strong>Técnico / Resolutor</strong> — atiende tickets, los toma, comenta y cierra con propuesta de solución</div></li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">👤</span><div><strong>Cliente / Colaborador</strong> — crea tickets, sigue el estado y valida la resolución</div></li>
+      </ul>
+    </div>
+    <div class="card card-pad">
+      <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:12px">📊 Métricas clave del sistema</div>
+      <ul class="checklist">
+        <li><span class="check-icon" style="background:#fef2f2;color:#dc2626">⏱</span>Triaje IA ≤ 5 segundos por ticket</li>
+        <li><span class="check-icon" style="background:#fef2f2;color:#dc2626">⚡</span>Navegación y consultas ≤ 2 segundos bajo carga normal</li>
+        <li><span class="check-icon" style="background:#fef2f2;color:#dc2626">🔒</span>Disponibilidad mínima 99.5% mensual (24/7)</li>
+        <li><span class="check-icon" style="background:#fef2f2;color:#dc2626">📱</span>Interfaz responsiva, español, formatos dd/mm/aaaa</li>
+        <li><span class="check-icon" style="background:#fef2f2;color:#dc2626">🛡</span>RBAC estricto + segregación lógica multi-tenant</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     2. INFRAESTRUCTURA
+══════════════════════════════════════ -->
+<div class="section" id="infra">
+  <div class="section-header">
+    <div class="section-icon" style="background:#f0fdf4">🏗</div>
+    <div>
+      <div class="section-num">02 · Infraestructura</div>
+      <div class="section-title">Despliegue y Servidores</div>
+      <div class="section-desc">Stack mínimo de producción para el MVP</div>
+    </div>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:20px">
+    <div class="infra-box">
+      <div class="infra-icon">🖥</div>
+      <div class="infra-name">VPS Ubuntu</div>
+      <div class="infra-detail">2 GB RAM · 2 vCPU<br>Ubuntu 22.04 LTS</div>
+      <div style="margin-top:10px"><span class="badge badge-blue">Backend</span> <span class="badge badge-blue">DB</span></div>
+    </div>
+    <div class="infra-box">
+      <div class="infra-icon">🐘</div>
+      <div class="infra-name">PostgreSQL 16</div>
+      <div class="infra-detail">Instalado en VPS<br>Esquemas por Tenant</div>
+      <div style="margin-top:10px"><span class="badge badge-purple">Persistencia</span></div>
+    </div>
+    <div class="infra-box">
+      <div class="infra-icon">▲</div>
+      <div class="infra-name">Vercel</div>
+      <div class="infra-detail">Deploy automático<br>Angular + CDN global</div>
+      <div style="margin-top:10px"><span class="badge badge-green">Frontend</span></div>
+    </div>
+    <div class="infra-box">
+      <div class="infra-icon">🔒</div>
+      <div class="infra-name">Let's Encrypt</div>
+      <div class="infra-detail">HTTPS gratuito<br>Renovación automática</div>
+      <div style="margin-top:10px"><span class="badge badge-orange">TLS/SSL</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div class="card-title">🌐 Arquitectura de Red</div>
+    </div>
+    <div class="card-pad">
+      <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;gap:8px">
+        <div style="text-align:center;flex:1;min-width:100px">
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;font-size:12px">
+            <div style="font-size:20px;margin-bottom:4px">📱💻</div>
+            <div style="font-weight:600">Usuarios</div>
+            <div style="color:#6b7280;font-size:11px">Browser / App móvil</div>
+          </div>
+        </div>
+        <div style="color:#9ca3af;font-size:20px;padding:0 4px">→</div>
+        <div style="text-align:center;flex:1;min-width:100px">
+          <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px;font-size:12px">
+            <div style="font-size:20px;margin-bottom:4px">▲</div>
+            <div style="font-weight:600">Vercel CDN</div>
+            <div style="color:#6b7280;font-size:11px">Angular SPA + HTTPS</div>
+          </div>
+        </div>
+        <div style="color:#9ca3af;font-size:20px;padding:0 4px">→</div>
+        <div style="text-align:center;flex:1;min-width:100px">
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px;font-size:12px">
+            <div style="font-size:20px;margin-bottom:4px">🌐</div>
+            <div style="font-weight:600">Nginx</div>
+            <div style="color:#6b7280;font-size:11px">Reverse proxy + SSL</div>
+          </div>
+        </div>
+        <div style="color:#9ca3af;font-size:20px;padding:0 4px">→</div>
+        <div style="text-align:center;flex:1;min-width:100px">
+          <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:10px;font-size:12px">
+            <div style="font-size:20px;margin-bottom:4px">☕</div>
+            <div style="font-weight:600">Spring Boot 3</div>
+            <div style="color:#6b7280;font-size:11px">API REST + WebSocket</div>
+          </div>
+        </div>
+        <div style="color:#9ca3af;font-size:20px;padding:0 4px">→</div>
+        <div style="text-align:center;flex:1;min-width:100px">
+          <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px;font-size:12px">
+            <div style="font-size:20px;margin-bottom:4px">🐘</div>
+            <div style="font-weight:600">PostgreSQL</div>
+            <div style="color:#6b7280;font-size:11px">Multi-esquema</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <span style="font-size:18px">💡</span>
+    <div><strong>CI/CD:</strong> GitHub Actions → build automático → deploy en Vercel (frontend) y VPS via SSH (backend). Backups diarios automáticos de PostgreSQL con pg_dump. Nginx actúa como reverse proxy en el VPS exponiendo el puerto 8080 del backend con HTTPS.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     3. STACK TECNOLÓGICO
+══════════════════════════════════════ -->
+<div class="section" id="tech">
+  <div class="section-header">
+    <div class="section-icon" style="background:#faf5ff">⚙️</div>
+    <div>
+      <div class="section-num">03 · Stack Tecnológico</div>
+      <div class="section-title">Tecnologías y Herramientas</div>
+      <div class="section-desc">Cada tecnología elegida según rol específico en el sistema</div>
+    </div>
+  </div>
+
+  <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:12px">🖥 Frontend</div>
+  <div class="grid-3" style="margin-bottom:20px">
+    <div class="tech-item">
+      <div class="tech-icon" style="background:#eff6ff;color:#2563eb">NG</div>
+      <div>
+        <div class="tech-name">Angular 17+</div>
+        <div class="tech-desc">Framework SPA con Standalone Components, Signals y lazy loading por módulo/ruta</div>
+        <div class="tech-role">Portal Cliente + Panel Admin</div>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon" style="background:#f0fdf4;color:#16a34a">IO</div>
+      <div>
+        <div class="tech-name">Ionic + Angular</div>
+        <div class="tech-desc">Aplicación móvil híbrida para técnicos. Reutiliza servicios del portal Angular</div>
+        <div class="tech-role">App Técnico (iOS/Android)</div>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon" style="background:#faf5ff;color:#7c3aed">RX</div>
+      <div>
+        <div class="tech-name">RxJS + HttpClient</div>
+        <div class="tech-desc">Manejo reactivo de peticiones HTTP, WebSockets y validaciones asíncronas en formularios</div>
+        <div class="tech-role">Comunicación API</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:12px">⚡ Backend</div>
+  <div class="grid-3" style="margin-bottom:20px">
+    <div class="tech-item">
+      <div class="tech-icon" style="background:#ecfdf5;color:#065f46">SB</div>
+      <div>
+        <div class="tech-name">Spring Boot 3</div>
+        <div class="tech-desc">Framework principal. REST controllers, Spring Security, WebSocket (STOMP), Spring Mail</div>
+        <div class="tech-role">API Core</div>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon" style="background:#fff7ed;color:#c2410c">JP</div>
+      <div>
+        <div class="tech-name">Spring Data JPA</div>
+        <div class="tech-desc">ORM con Hibernate. Repositorios JPA. Soporte multi-esquema con EntityManager dinámico</div>
+        <div class="tech-role">Persistencia</div>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon" style="background:#fef2f2;color:#991b1b">LQ</div>
+      <div>
+        <div class="tech-name">Liquibase</div>
+        <div class="tech-desc">Migraciones de BD versionadas. Permite crear y actualizar esquemas tenant de forma controlada</div>
+        <div class="tech-role">Migraciones DB</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:12px">🗄 Base de Datos y Servicios</div>
+  <div class="grid-4" style="margin-bottom:20px">
+    <div class="tech-item" style="flex-direction:column;gap:8px">
+      <div class="tech-icon" style="background:#f0f9ff;color:#0369a1;width:36px;height:36px">PG</div>
+      <div>
+        <div class="tech-name">PostgreSQL 16</div>
+        <div class="tech-desc">Multi-esquema. Schema search_path por tenant. Full-text search nativo</div>
+        <div class="tech-role">Bases de datos</div>
+      </div>
+    </div>
+    <div class="tech-item" style="flex-direction:column;gap:8px">
+      <div class="tech-icon" style="background:#fef9c3;color:#854d0e;width:36px;height:36px">RD</div>
+      <div>
+        <div class="tech-name">Redis (opcional)</div>
+        <div class="tech-desc">Cache de sesiones JWT revocadas y blacklist de tokens</div>
+        <div class="tech-role">Cache</div>
+      </div>
+    </div>
+    <div class="tech-item" style="flex-direction:column;gap:8px">
+      <div class="tech-icon" style="background:#f0fdf4;color:#166534;width:36px;height:36px">GN</div>
+      <div>
+        <div class="tech-name">Google Gemini</div>
+        <div class="tech-desc">LLM para triaje, clasificación, sugerencia de prioridad y área</div>
+        <div class="tech-role">IA</div>
+      </div>
+    </div>
+    <div class="tech-item" style="flex-direction:column;gap:8px">
+      <div class="tech-icon" style="background:#fff7ed;color:#9a3412;width:36px;height:36px">FC</div>
+      <div>
+        <div class="tech-name">Firebase FCM</div>
+        <div class="tech-desc">Push notifications para app móvil cuando la app está cerrada</div>
+        <div class="tech-role">Push Notif.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;margin-bottom:12px">🔧 DevOps y Herramientas</div>
+  <div class="grid-auto">
+    <div class="tech-item" style="padding:12px 16px">
+      <div>
+        <div class="tech-name">GitHub Actions</div>
+        <div class="tech-desc">CI/CD automático por rama/tag</div>
+        <div class="tech-role">CI/CD</div>
+      </div>
+    </div>
+    <div class="tech-item" style="padding:12px 16px">
+      <div>
+        <div class="tech-name">Docker</div>
+        <div class="tech-desc">Contenedor del backend en VPS</div>
+        <div class="tech-role">Contenedores</div>
+      </div>
+    </div>
+    <div class="tech-item" style="padding:12px 16px">
+      <div>
+        <div class="tech-name">MapStruct</div>
+        <div class="tech-desc">Mapping DTO ↔ Entity automático</div>
+        <div class="tech-role">Backend Util</div>
+      </div>
+    </div>
+    <div class="tech-item" style="padding:12px 16px">
+      <div>
+        <div class="tech-name">BCrypt</div>
+        <div class="tech-desc">Hash de contraseñas en BD</div>
+        <div class="tech-role">Seguridad</div>
+      </div>
+    </div>
+    <div class="tech-item" style="padding:12px 16px">
+      <div>
+        <div class="tech-name">Spring Mail + SMTP</div>
+        <div class="tech-desc">Correos transaccionales y OTP</div>
+        <div class="tech-role">Mensajería</div>
+      </div>
+    </div>
+    <div class="tech-item" style="padding:12px 16px">
+      <div>
+        <div class="tech-name">Notion + Scrum</div>
+        <div class="tech-desc">Gestión del backlog y sprints</div>
+        <div class="tech-role">Gestión</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     4. MULTI-TENANT
+══════════════════════════════════════ -->
+<div class="section" id="multitenant">
+  <div class="section-header">
+    <div class="section-icon" style="background:#fef9c3">🏘</div>
+    <div>
+      <div class="section-num">04 · Multi-Tenancy</div>
+      <div class="section-title">Aislamiento por Esquema PostgreSQL</div>
+      <div class="section-desc">Cada empresa tiene su propio esquema aislado en la misma base de datos</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-header" style="background:#f8fafc">
+        <div class="card-title">📦 Esquema <code style="color:#7c3aed">public</code> — Global</div>
+        <span class="badge badge-gray">Compartido</span>
+      </div>
+      <div class="card-pad">
+        <p style="font-size:13px;color:#6b7280;margin-bottom:12px">Contiene los datos globales del sistema, independientes de cualquier empresa:</p>
+        <ul class="checklist">
+          <li><span class="check-icon" style="background:#f3f4f6;color:#374151">📄</span><div><code>tenants</code> — registro de empresas, plan_type, subdominio</div></li>
+          <li><span class="check-icon" style="background:#f3f4f6;color:#374151">👤</span><div><code>usuarios_globales</code> — email, password, is_active</div></li>
+          <li><span class="check-icon" style="background:#f3f4f6;color:#374151">🔑</span><div><code>verification_tokens</code> — OTP, tokens de activación y recuperación</div></li>
+          <li><span class="check-icon" style="background:#f3f4f6;color:#374151">📋</span><div><code>user_tenant_roles</code> — relación usuario ↔ tenant ↔ rol</div></li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header" style="background:#f8fafc">
+        <div class="card-title">🏢 Esquema <code style="color:#059669">tenant_[nombre]</code> — Por Empresa</div>
+        <span class="badge badge-green">Aislado</span>
+      </div>
+      <div class="card-pad">
+        <p style="font-size:13px;color:#6b7280;margin-bottom:12px">Creado automáticamente al activarse cada empresa. Contiene:</p>
+        <ul class="checklist">
+          <li><span class="check-icon" style="background:#ecfdf5;color:#059669">🗂</span><div><code>areas</code> — departamentos de la empresa (TI, RRHH, etc.)</div></li>
+          <li><span class="check-icon" style="background:#ecfdf5;color:#059669">👥</span><div><code>usuarios</code> — colaboradores del tenant con sus roles locales</div></li>
+          <li><span class="check-icon" style="background:#ecfdf5;color:#059669">🎫</span><div><code>tickets</code> — incidencias con estado, prioridad, IA metadata</div></li>
+          <li><span class="check-icon" style="background:#ecfdf5;color:#059669">💬</span><div><code>ticket_mensajes</code> — comentarios público/privado e historial</div></li>
+          <li><span class="check-icon" style="background:#ecfdf5;color:#059669">🔔</span><div><code>notificaciones</code> — bandeja in-app por usuario</div></li>
+          <li><span class="check-icon" style="background:#ecfdf5;color:#059669">📊</span><div><code>audit_log</code> — accesos, IPs y cambios de estado</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🔄 Cómo funciona el routing multi-tenant</div>
+    </div>
+    <div class="card-pad">
+      <div class="flow-steps" style="gap:12px">
+        <div class="flow-step" style="min-width:140px">
+          <div class="flow-step-num" style="background:#2563eb">1</div>
+          <div class="flow-step-title">Request HTTP</div>
+          <div class="flow-step-sub"><code>acme.smartdesk.com</code></div>
+        </div>
+        <div class="flow-step" style="min-width:140px">
+          <div class="flow-step-num" style="background:#7c3aed">2</div>
+          <div class="flow-step-title">JWT Filter</div>
+          <div class="flow-step-sub">Extrae <code>tenant_id</code> del token</div>
+        </div>
+        <div class="flow-step" style="min-width:140px">
+          <div class="flow-step-num" style="background:#0891b2">3</div>
+          <div class="flow-step-title">TenantContext</div>
+          <div class="flow-step-sub">Set <code>search_path = tenant_acme</code></div>
+        </div>
+        <div class="flow-step" style="min-width:140px">
+          <div class="flow-step-num" style="background:#059669">4</div>
+          <div class="flow-step-title">JPA Repository</div>
+          <div class="flow-step-sub">Queries auto-aisladas al esquema</div>
+        </div>
+        <div class="flow-step" style="min-width:140px">
+          <div class="flow-step-num" style="background:#d97706">5</div>
+          <div class="flow-step-title">Response</div>
+          <div class="flow-step-sub">Solo datos de ese tenant</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     5. ARQUITECTURA
+══════════════════════════════════════ -->
+<div class="section" id="architecture">
+  <div class="section-header">
+    <div class="section-icon" style="background:#f0fdf4">🏛</div>
+    <div>
+      <div class="section-num">05 · Arquitectura del Sistema</div>
+      <div class="section-title">Capas de la Aplicación</div>
+      <div class="section-desc">Separación de responsabilidades entre todas las capas</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:6px">
+    <div class="arch-layer">
+      <div class="arch-layer-header" style="background:#eff6ff;color:#1d4ed8">
+        <span>💻</span> Capa de Presentación — Frontend Angular
+      </div>
+      <div class="arch-layer-body">
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#2563eb"></span>LandingPageComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#2563eb"></span>RegisterComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#2563eb"></span>VerifyComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#2563eb"></span>LoginComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>TicketCreateComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>TicketListComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>TicketDetailComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>AdminDashboardComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>ColaboradoresComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>AreasComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#dc2626"></span>ResolutorQueueComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#d97706"></span>AnalyticsComponent</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#0891b2"></span>AuthService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#0891b2"></span>TicketService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#0891b2"></span>NotificationService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#0891b2"></span>WebSocketService</div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#9ca3af;font-size:12px;padding:6px 0">⬆ HTTP REST / WebSocket (STOMP) ⬇</div>
+    <div class="arch-layer">
+      <div class="arch-layer-header" style="background:#ecfdf5;color:#065f46">
+        <span>⚡</span> Capa de API — Spring Boot Controllers
+      </div>
+      <div class="arch-layer-body">
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>AuthController <span class="badge badge-gray" style="margin-left:4px">POST /auth/*</span></div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>TicketController <span class="badge badge-gray" style="margin-left:4px">REST /tickets</span></div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>AreaController <span class="badge badge-gray" style="margin-left:4px">REST /areas</span></div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>ColaboradorController <span class="badge badge-gray" style="margin-left:4px">REST /colaboradores</span></div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>TenantController <span class="badge badge-gray" style="margin-left:4px">REST /tenant</span></div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#059669"></span>NotificationController <span class="badge badge-gray" style="margin-left:4px">WS /ws</span></div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#dc2626"></span>GlobalExceptionHandler <span class="badge badge-red" style="margin-left:4px">@RestControllerAdvice</span></div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#9ca3af;font-size:12px;padding:6px 0">⬇</div>
+    <div class="arch-layer">
+      <div class="arch-layer-header" style="background:#fff7ed;color:#c2410c">
+        <span>🔧</span> Capa de Servicios — Lógica de Negocio
+      </div>
+      <div class="arch-layer-body">
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#d97706"></span>RegistrationService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#d97706"></span>TicketService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#d97706"></span>TenantService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#d97706"></span>RoleAssignmentService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#d97706"></span>EmailNotificationService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#d97706"></span>ColaboradorService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>GeminiTriageService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>WebSocketNotificationService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>FcmPushService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#0891b2"></span>JwtService</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#0891b2"></span>TenantSchemaRouter</div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#9ca3af;font-size:12px;padding:6px 0">⬇</div>
+    <div class="arch-layer">
+      <div class="arch-layer-header" style="background:#f5f3ff;color:#6d28d9">
+        <span>🗄</span> Capa de Persistencia — Repositorios JPA
+      </div>
+      <div class="arch-layer-body">
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>UserRepository</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>TenantRepository</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>VerificationTokenRepository</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>TicketRepository</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>AreaRepository</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>TicketMessageRepository</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>ColaboradorRepository</div>
+        <div class="arch-chip"><span class="arch-chip-dot" style="background:#7c3aed"></span>NotificacionRepository</div>
+      </div>
+    </div>
+    <div style="text-align:center;color:#9ca3af;font-size:12px;padding:6px 0">⬇</div>
+    <div class="arch-layer">
+      <div class="arch-layer-header" style="background:#fef9c3;color:#854d0e">
+        <span>🐘</span> PostgreSQL — Esquemas
+      </div>
+      <div class="arch-layer-body">
+        <div class="arch-chip" style="background:#fef9c3;border-color:#fde047"><span class="arch-chip-dot" style="background:#ca8a04"></span><strong>public</strong>: tenants, usuarios_globales, tokens</div>
+        <div class="arch-chip" style="background:#ecfdf5;border-color:#a7f3d0"><span class="arch-chip-dot" style="background:#059669"></span><strong>tenant_acme</strong>: areas, usuarios, tickets, mensajes</div>
+        <div class="arch-chip" style="background:#eff6ff;border-color:#bfdbfe"><span class="arch-chip-dot" style="background:#2563eb"></span><strong>tenant_empresa_b</strong>: areas, usuarios, tickets, mensajes</div>
+        <div class="arch-chip" style="background:#f3f4f6;border-color:#d1d5db"><span class="arch-chip-dot" style="background:#6b7280"></span><strong>tenant_n…</strong>: (N empresas)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     6. BASE DE DATOS
+══════════════════════════════════════ -->
+<div class="section" id="database">
+  <div class="section-header">
+    <div class="section-icon" style="background:#f0f9ff">🗄</div>
+    <div>
+      <div class="section-num">06 · Base de Datos</div>
+      <div class="section-title">Diseño de Tablas PostgreSQL</div>
+      <div class="section-desc">Esquema público (global) + esquema por tenant</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#38bdf8;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      <span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;display:inline-block"></span>
+      ESQUEMA: public (datos globales)
+    </div>
+    <div class="db-schema">
+      <div class="db-schema-header">
+        <span class="db-dot" style="background:#ef4444"></span>
+        <span class="db-dot" style="background:#fbbf24"></span>
+        <span class="db-dot" style="background:#4ade80"></span>
+        <span class="db-schema-title" style="margin-left:8px">smartdesk_db — schema: public</span>
+      </div>
+      <div class="db-tables">
+        <div class="db-table">
+          <div class="db-table-name">tenants</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">name</span><span class="db-field-type">VARCHAR(100)</span></div>
+          <div class="db-field"><span class="db-field-name">subdomain</span><span class="db-field-type">VARCHAR(50)</span></div>
+          <div class="db-field"><span class="db-field-name">schema_name</span><span class="db-field-type">VARCHAR(63)</span></div>
+          <div class="db-field"><span class="db-field-name">plan_type</span><span class="db-field-type">VARCHAR(20)</span></div>
+          <div class="db-field"><span class="db-field-name">logo_url</span><span class="db-field-type">TEXT</span></div>
+          <div class="db-field"><span class="db-field-name">primary_color</span><span class="db-field-type">VARCHAR(7)</span></div>
+          <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">TIMESTAMP</span></div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">usuarios_globales</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">nombres</span><span class="db-field-type">VARCHAR(100)</span></div>
+          <div class="db-field"><span class="db-field-name">email</span><span class="db-field-type">VARCHAR(255)</span></div>
+          <div class="db-field"><span class="db-field-name">password</span><span class="db-field-type">VARCHAR(255)</span></div>
+          <div class="db-field"><span class="db-field-name">is_active</span><span class="db-field-type">BOOLEAN</span></div>
+          <div class="db-field"><span class="db-field-name">must_change_pass</span><span class="db-field-type">BOOLEAN</span></div>
+          <div class="db-field"><span class="db-field-name">failed_attempts</span><span class="db-field-type">INTEGER</span></div>
+          <div class="db-field"><span class="db-field-name">locked_until</span><span class="db-field-type">TIMESTAMP</span></div>
+          <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">TIMESTAMP</span></div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">user_tenant_roles</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">user_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">tenant_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">role</span><span class="db-field-type">VARCHAR(30)</span></div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">verification_tokens</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">token</span><span class="db-field-type">VARCHAR(255)</span></div>
+          <div class="db-field"><span class="db-field-name">user_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">type</span><span class="db-field-type">VARCHAR(20)</span></div>
+          <div class="db-field"><span class="db-field-name">expiry_date</span><span class="db-field-type">TIMESTAMP</span></div>
+          <div class="db-field"><span class="db-field-name">used</span><span class="db-field-type">BOOLEAN</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#4ade80;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      <span style="width:10px;height:10px;border-radius:50%;background:#4ade80;display:inline-block"></span>
+      ESQUEMA: tenant_[nombre] (por empresa — se replica para cada tenant)
+    </div>
+    <div class="db-schema">
+      <div class="db-schema-header">
+        <span class="db-dot" style="background:#ef4444"></span>
+        <span class="db-dot" style="background:#fbbf24"></span>
+        <span class="db-dot" style="background:#4ade80"></span>
+        <span class="db-schema-title" style="margin-left:8px">smartdesk_db — schema: tenant_acme (ejemplo)</span>
+      </div>
+      <div class="db-tables">
+        <div class="db-table">
+          <div class="db-table-name">areas</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">nombre</span><span class="db-field-type">VARCHAR(100)</span></div>
+          <div class="db-field"><span class="db-field-name">descripcion</span><span class="db-field-type">TEXT</span></div>
+          <div class="db-field"><span class="db-field-name">is_active</span><span class="db-field-type">BOOLEAN</span></div>
+          <div class="db-field"><span class="db-field-name">deleted_at</span><span class="db-field-type">TIMESTAMP</span></div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">usuarios</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">global_user_id</span><span class="db-field-flags"><span class="db-fk">REF</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">nombres</span><span class="db-field-type">VARCHAR(100)</span></div>
+          <div class="db-field"><span class="db-field-name">email</span><span class="db-field-type">VARCHAR(255)</span></div>
+          <div class="db-field"><span class="db-field-name">rol</span><span class="db-field-type">VARCHAR(20)</span></div>
+          <div class="db-field"><span class="db-field-name">area_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">estado</span><span class="db-field-type">VARCHAR(15)</span></div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">tickets</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">titulo</span><span class="db-field-type">VARCHAR(50)</span></div>
+          <div class="db-field"><span class="db-field-name">descripcion</span><span class="db-field-type">TEXT</span></div>
+          <div class="db-field"><span class="db-field-name">estado</span><span class="db-field-type">VARCHAR(20)</span></div>
+          <div class="db-field"><span class="db-field-name">prioridad</span><span class="db-field-type">VARCHAR(10)</span></div>
+          <div class="db-field"><span class="db-field-name">creador_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">resolutor_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">area_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">ia_keywords</span><span class="db-field-type">TEXT</span></div>
+          <div class="db-field"><span class="db-field-name">ia_razonamiento</span><span class="db-field-type">TEXT</span></div>
+          <div class="db-field"><span class="db-field-name">calificacion</span><span class="db-field-type">INTEGER</span></div>
+          <div class="db-field"><span class="db-field-name">sla_exceeded</span><span class="db-field-type">BOOLEAN</span></div>
+          <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">TIMESTAMP</span></div>
+          <div class="db-field"><span class="db-field-name">closed_at</span><span class="db-field-type">TIMESTAMP</span></div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">ticket_mensajes</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">ticket_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">autor_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">contenido</span><span class="db-field-type">TEXT</span></div>
+          <div class="db-field"><span class="db-field-name">es_nota_interna</span><span class="db-field-type">BOOLEAN</span></div>
+          <div class="db-field"><span class="db-field-name">tipo</span><span class="db-field-type">VARCHAR(15)</span></div>
+          <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">TIMESTAMP</span></div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">notificaciones</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">usuario_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">ticket_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">mensaje</span><span class="db-field-type">TEXT</span></div>
+          <div class="db-field"><span class="db-field-name">leida</span><span class="db-field-type">BOOLEAN</span></div>
+          <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">TIMESTAMP</span></div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">audit_log</div>
+          <div class="db-field"><span class="db-field-name">id</span><span class="db-field-flags"><span class="db-pk">PK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">usuario_id</span><span class="db-field-flags"><span class="db-fk">FK</span><span class="db-field-type">UUID</span></span></div>
+          <div class="db-field"><span class="db-field-name">accion</span><span class="db-field-type">VARCHAR(50)</span></div>
+          <div class="db-field"><span class="db-field-name">ip_address</span><span class="db-field-type">VARCHAR(45)</span></div>
+          <div class="db-field"><span class="db-field-name">created_at</span><span class="db-field-type">TIMESTAMP</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     7. SEGURIDAD
+══════════════════════════════════════ -->
+<div class="section" id="security">
+  <div class="section-header">
+    <div class="section-icon" style="background:#fef2f2">🔒</div>
+    <div>
+      <div class="section-num">07 · Seguridad</div>
+      <div class="section-title">Autenticación y Control de Acceso</div>
+      <div class="section-desc">Spring Security + JWT + OTP por correo electrónico</div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:20px">
+    <div class="card card-pad">
+      <div style="font-size:20px;margin-bottom:8px">🔑</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">JWT (JSON Web Tokens)</div>
+      <ul class="checklist">
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Emitido tras login exitoso</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Contiene <code>user_id</code>, <code>tenant_id</code>, <code>role</code></li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Expira en 60 minutos de inactividad</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Revocado en logout y suspensión</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Validado en cada ruta protegida</li>
+      </ul>
+    </div>
+    <div class="card card-pad">
+      <div style="font-size:20px;margin-bottom:8px">📧</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">OTP por correo (MFA)</div>
+      <ul class="checklist">
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Registro: token de activación único</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Recuperación de contraseña: token 1 uso</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Expiración de 24h (configurable)</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Invalidación tras uso</li>
+      </ul>
+    </div>
+    <div class="card card-pad">
+      <div style="font-size:20px;margin-bottom:8px">🛡</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">Spring Security + RBAC</div>
+      <ul class="checklist">
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>RBAC: ADMIN, TECNICO, CLIENTE</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Bloqueo tras 5 intentos fallidos (15 min)</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>HTTPS obligatorio en toda comunicación</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>BCrypt para hash de contraseñas</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Audit log de todos los accesos</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Flujo de autenticación completo</div>
+    </div>
+    <div class="card-pad">
+      <div class="code-block">
+<span class="code-cmt">// 1. Usuario envía credenciales al login</span>
+POST /api/v1/auth/login
+{ <span class="code-str">"email"</span>: <span class="code-str">"user@acme.com"</span>, <span class="code-str">"password"</span>: <span class="code-str">"••••••••"</span> }
+
+<span class="code-cmt">// 2. Spring Security valida BCrypt + tenant + estado cuenta</span>
+<span class="code-cmt">// 3. Si OK → JWT emitido con claims del tenant</span>
+{
+  <span class="code-str">"sub"</span>: <span class="code-str">"user-uuid"</span>,
+  <span class="code-str">"tenant_id"</span>: <span class="code-str">"acme-uuid"</span>,
+  <span class="code-str">"role"</span>: <span class="code-str">"TECNICO"</span>,
+  <span class="code-str">"schema"</span>: <span class="code-str">"tenant_acme"</span>,
+  <span class="code-str">"exp"</span>: <span class="code-val">1750000000</span>
+}
+
+<span class="code-cmt">// 4. Cada request usa el token → TenantFilter setea search_path</span>
+<span class="code-fn">SET search_path TO tenant_acme, public;</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     8. IA
+══════════════════════════════════════ -->
+<div class="section" id="ia">
+  <div class="section-header">
+    <div class="section-icon" style="background:#f0fdf4">🤖</div>
+    <div>
+      <div class="section-num">08 · Inteligencia Artificial</div>
+      <div class="section-title">Triaje Automático con Google Gemini</div>
+      <div class="section-desc">LLM procesa cada ticket y devuelve clasificación estructurada en &lt; 5 segundos</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px">
+    <div class="card card-pad">
+      <div style="font-weight:600;font-size:14px;margin-bottom:12px">📥 Input al LLM</div>
+      <div class="code-block" style="font-size:11px">
+{
+  <span class="code-str">"descripcion_usuario"</span>: <span class="code-str">"No puedo acceder a mi correo corporativo desde ayer"</span>,
+  <span class="code-str">"areas_disponibles"</span>: [<span class="code-str">"TI"</span>, <span class="code-str">"RRHH"</span>, <span class="code-str">"Facturación"</span>],
+  <span class="code-str">"contexto_empresa"</span>: <span class="code-str">"Empresa de logística, 50 empleados"</span>
+}
+      </div>
+    </div>
+    <div class="card card-pad">
+      <div style="font-weight:600;font-size:14px;margin-bottom:12px">📤 Output estructurado del LLM</div>
+      <div class="code-block" style="font-size:11px">
+{
+  <span class="code-str">"titulo"</span>: <span class="code-str">"Acceso bloqueado a correo corporativo"</span>,
+  <span class="code-str">"area"</span>: <span class="code-str">"TI"</span>,
+  <span class="code-str">"prioridad"</span>: <span class="code-str">"Alta"</span>,
+  <span class="code-str">"keywords"</span>: [<span class="code-str">"email"</span>, <span class="code-str">"acceso"</span>, <span class="code-str">"bloqueado"</span>],
+  <span class="code-str">"razonamiento"</span>: <span class="code-str">"Incidencia de acceso afecta productividad diaria"</span>,
+  <span class="code-str">"solucion_sugerida"</span>: <span class="code-str">"Revisar configuración MX y estado de cuenta en AD"</span>
+}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-4">
+    <div class="card card-pad" style="text-align:center">
+      <div style="font-size:24px;margin-bottom:8px">🏷</div>
+      <div style="font-weight:600;font-size:13px">Clasificación</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px">Asigna el área resolutora correcta automáticamente</div>
+    </div>
+    <div class="card card-pad" style="text-align:center">
+      <div style="font-size:24px;margin-bottom:8px">⚡</div>
+      <div style="font-weight:600;font-size:13px">Priorización</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px">Crítica / Alta / Media / Baja según impacto</div>
+    </div>
+    <div class="card card-pad" style="text-align:center">
+      <div style="font-size:24px;margin-bottom:8px">✏️</div>
+      <div style="font-weight:600;font-size:13px">Titulación</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px">Genera título breve ≤ 50 caracteres del ticket</div>
+    </div>
+    <div class="card card-pad" style="text-align:center">
+      <div style="font-size:24px;margin-bottom:8px">💡</div>
+      <div style="font-weight:600;font-size:13px">Solución inicial</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px">Propone primera acción para el técnico</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     9. NOTIFICACIONES
+══════════════════════════════════════ -->
+<div class="section" id="notifications">
+  <div class="section-header">
+    <div class="section-icon" style="background:#fff7ed">🔔</div>
+    <div>
+      <div class="section-num">09 · Notificaciones</div>
+      <div class="section-title">Sistema de Alertas en Tiempo Real</div>
+      <div class="section-desc">WebSockets para app abierta + FCM para app cerrada</div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card card-pad" style="border-top:3px solid #7c3aed">
+      <div style="font-size:20px;margin-bottom:8px">⚡</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">WebSockets (STOMP)</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:12px">Cuando el usuario tiene la app abierta. Notificación instantánea en el ícono de campana.</div>
+      <ul class="checklist">
+        <li><span class="check-icon" style="background:#f5f3ff;color:#7c3aed">✓</span>Nuevo comentario en ticket</li>
+        <li><span class="check-icon" style="background:#f5f3ff;color:#7c3aed">✓</span>Cambio de estado del ticket</li>
+        <li><span class="check-icon" style="background:#f5f3ff;color:#7c3aed">✓</span>Ticket crítico o urgente asignado al área</li>
+        <li><span class="check-icon" style="background:#f5f3ff;color:#7c3aed">✓</span>Propuesta de resolución recibida</li>
+      </ul>
+    </div>
+    <div class="card card-pad" style="border-top:3px solid #d97706">
+      <div style="font-size:20px;margin-bottom:8px">🔥</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">Firebase FCM (Push)</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:12px">Cuando el técnico tiene la app móvil cerrada o en segundo plano.</div>
+      <ul class="checklist">
+        <li><span class="check-icon" style="background:#fffbeb;color:#d97706">✓</span>Ticket crítico asignado al área</li>
+        <li><span class="check-icon" style="background:#fffbeb;color:#d97706">✓</span>Ticket en proceso con SLA excedido</li>
+        <li><span class="check-icon" style="background:#fffbeb;color:#d97706">✓</span>Solo para tickets Alta/Crítica</li>
+      </ul>
+    </div>
+    <div class="card card-pad" style="border-top:3px solid #059669">
+      <div style="font-size:20px;margin-bottom:8px">📨</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">Correo Transaccional</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:12px">Para eventos clave que requieren registro formal fuera de la plataforma.</div>
+      <ul class="checklist">
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Token de activación (registro)</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Recuperación de contraseña</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Invitación de colaborador</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Boletín de SLA excedido (admin)</li>
+        <li><span class="check-icon" style="background:#ecfdf5;color:#059669">✓</span>Propuesta de cierre al creador</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     10. SPRINTS
+══════════════════════════════════════ -->
+<div class="section" id="sprints">
+  <div class="section-header">
+    <div class="section-icon" style="background:#f0fdf4">📅</div>
+    <div>
+      <div class="section-num">10 · Planificación</div>
+      <div class="section-title">Roadmap de Sprints (1 semana c/u)</div>
+      <div class="section-desc">Orden recomendado según dependencias técnicas</div>
+    </div>
+  </div>
+
+  <div class="card" style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:700px">
+      <thead>
+        <tr style="background:#1f2937;color:white">
+          <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600;width:80px">Sprint</th>
+          <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600">HU</th>
+          <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600">Nombre</th>
+          <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600">Objetivo</th>
+          <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600">Resultado esperado</th>
+          <th style="padding:10px 16px;text-align:center;font-size:12px;font-weight:600">Días</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #f3f4f6">
+          <td style="padding:12px 16px"><span class="badge badge-purple">Sprint 1</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#7c3aed">HU01+HU02</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Registro de Cuenta + Licencia B2B</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">Registro público con email, activación por token, pago de suscripción</td>
+          <td style="padding:12px 16px;font-size:12px">Usuario puede crear sandbox y pagar licencia</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">5</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa">
+          <td style="padding:12px 16px"><span class="badge badge-blue">Sprint 2</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#2563eb">HU03</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Aprovisionamiento Automático</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">Crear esquema tenant, subdominio, áreas base, credenciales temporales</td>
+          <td style="padding:12px 16px;font-size:12px">Empresa tiene entorno listo con primer login forzado</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">5</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6">
+          <td style="padding:12px 16px"><span class="badge badge-orange">Sprint 3</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#d97706">HU05+HU06</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Portal de Acceso + Sesión Segura</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">Login por subdominio, JWT, SSO, bloqueo temporal, recuperación de contraseña</td>
+          <td style="padding:12px 16px;font-size:12px">Colaboradores pueden ingresar de forma segura</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">6</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa">
+          <td style="padding:12px 16px"><span class="badge badge-green">Sprint 4</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#059669">HU07+HU08</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Mantenimiento + Colaboradores</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">Áreas resolutoras, gestión de colaboradores, asignaciones, suspensiones</td>
+          <td style="padding:12px 16px;font-size:12px">Admin gestiona su empresa y equipo completo</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">3</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6">
+          <td style="padding:12px 16px"><span class="badge" style="background:#fef2f2;color:#dc2626">Sprint 5</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#dc2626">HU04</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Integración de Colaboradores</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">Invitaciones individuales, CSV masivo, SSO corporativo, tokens de invitación</td>
+          <td style="padding:12px 16px;font-size:12px">Admin puede incorporar colaboradores en masa</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">5</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa">
+          <td style="padding:12px 16px"><span class="badge badge-purple">Sprint 6</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#7c3aed">HU09+HU10</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Emisión de Tickets + Cola Resolutor</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">Crear ticket con IA, triaje, bandeja resolutora, autoasignación, estados</td>
+          <td style="padding:12px 16px;font-size:12px">Flujo completo de ticket funcional con IA</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">7</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6">
+          <td style="padding:12px 16px"><span class="badge badge-blue">Sprint 7</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#2563eb">HU11</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Seguimiento + Cierre</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">Timeline, validación por cliente, calificación, comentarios públicos/privados</td>
+          <td style="padding:12px 16px;font-size:12px">Ciclo de vida completo del ticket</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">5</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;background:#fafafa">
+          <td style="padding:12px 16px"><span class="badge badge-orange">Sprint 8</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#d97706">HU12</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Analytics y Reportes</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">TTR, TMT, volumen, precisión IA, carga por área, exportación PDF/Excel</td>
+          <td style="padding:12px 16px;font-size:12px">Dashboard analítico completo</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">5</span></td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px"><span class="badge badge-green">Sprint 9</span></td>
+          <td style="padding:12px 16px;font-weight:700;color:#059669">HU13+HU14</td>
+          <td style="padding:12px 16px;font-weight:600;font-size:13px">Notificaciones + Búsqueda</td>
+          <td style="padding:12px 16px;font-size:12px;color:#6b7280">WebSockets, FCM, correos transaccionales, full-text search, filtros por fecha</td>
+          <td style="padding:12px 16px;font-size:12px">Sistema de alertas y búsqueda completamente funcional</td>
+          <td style="padding:12px 16px;text-align:center"><span class="badge badge-gray">6</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     11. HISTORIAS DE USUARIO
+══════════════════════════════════════ -->
+<div class="section" id="hu">
+  <div class="section-header">
+    <div class="section-icon" style="background:#faf5ff">📋</div>
+    <div>
+      <div class="section-num">11 · Historias de Usuario</div>
+      <div class="section-title">Backlog completo del producto</div>
+      <div class="section-desc">88 requerimientos funcionales organizados en 14 historias de usuario</div>
+    </div>
+  </div>
+
+  <div class="grid-auto">
+    <!-- HU01 -->
+    <div class="hu-card" style="border-left-color:#7c3aed">
+      <div class="hu-id" style="color:#7c3aed">HU01</div>
+      <div class="hu-title">Registro de Cuenta Gratuita</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Email, activación 2 pasos, sandbox. RF01–RF07</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 1</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">5 días</span>
+      </div>
+    </div>
+    <!-- HU02 -->
+    <div class="hu-card" style="border-left-color:#2563eb">
+      <div class="hu-id" style="color:#2563eb">HU02</div>
+      <div class="hu-title">Adquisición de Licencia B2B</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Formulario, pago Stripe, factura PDF. RF08–RF12</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 1</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">5 días</span>
+      </div>
+    </div>
+    <!-- HU03 -->
+    <div class="hu-card" style="border-left-color:#059669">
+      <div class="hu-id" style="color:#059669">HU03</div>
+      <div class="hu-title">Aprovisionamiento del Entorno</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Tenant ID, esquema, áreas base, creds temporales. RF13–RF18</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 2</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">5 días</span>
+      </div>
+    </div>
+    <!-- HU04 -->
+    <div class="hu-card" style="border-left-color:#dc2626">
+      <div class="hu-id" style="color:#dc2626">HU04</div>
+      <div class="hu-title">Integración de Colaboradores</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Invitaciones, CSV masivo, SSO Google/Azure. RF19–RF26</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 5</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">5 días</span>
+      </div>
+    </div>
+    <!-- HU05 -->
+    <div class="hu-card" style="border-left-color:#d97706">
+      <div class="hu-id" style="color:#d97706">HU05</div>
+      <div class="hu-title">Portal de Acceso Corporativo</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Login por subdominio, SSO, bloqueo, recuperación. RF27–RF32</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 3</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">6 días</span>
+      </div>
+    </div>
+    <!-- HU06 -->
+    <div class="hu-card" style="border-left-color:#0891b2">
+      <div class="hu-id" style="color:#0891b2">HU06</div>
+      <div class="hu-title">Control de Sesión Seguro</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">JWT, logout, inactividad 60min, audit log. RF33–RF37</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 3</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">6 días</span>
+      </div>
+    </div>
+    <!-- HU07 -->
+    <div class="hu-card" style="border-left-color:#7c3aed">
+      <div class="hu-id" style="color:#7c3aed">HU07</div>
+      <div class="hu-title">Mantenimiento del Entorno</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Logo, colores, áreas resolutoras, soft delete. RF38–RF43</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 4</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">3 días</span>
+      </div>
+    </div>
+    <!-- HU08 -->
+    <div class="hu-card" style="border-left-color:#059669">
+      <div class="hu-id" style="color:#059669">HU08</div>
+      <div class="hu-title">Gestión de Colaboradores</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Directorio, asignaciones, permisos, suspensión. RF44–RF50</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 4</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">3 días</span>
+      </div>
+    </div>
+    <!-- HU09 -->
+    <div class="hu-card" style="border-left-color:#dc2626">
+      <div class="hu-id" style="color:#dc2626">HU09</div>
+      <div class="hu-title">Emisión de Tickets con IA</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Triaje Gemini, adjuntos, prioridad auto, área sugerida. RF51–RF58</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 6</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">6 días</span>
+      </div>
+    </div>
+    <!-- HU10 -->
+    <div class="hu-card" style="border-left-color:#d97706">
+      <div class="hu-id" style="color:#d97706">HU10</div>
+      <div class="hu-title">Cola del Resolutor</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Bandeja del área, autoasignación, notas internas. RF66–RF73</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 6</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">5 días</span>
+      </div>
+    </div>
+    <!-- HU11 -->
+    <div class="hu-card" style="border-left-color:#2563eb">
+      <div class="hu-id" style="color:#2563eb">HU11</div>
+      <div class="hu-title">Seguimiento y Cierre</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Timeline, validación cliente, calificación con estrellas. RF59–RF65</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 7</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">5 días</span>
+      </div>
+    </div>
+    <!-- HU12 -->
+    <div class="hu-card" style="border-left-color:#0891b2">
+      <div class="hu-id" style="color:#0891b2">HU12</div>
+      <div class="hu-title">Analytics y Reportes</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">TTR, TMT, precisión IA, exportar PDF/Excel. RF74–RF79</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 8</span>
+        <span class="priority-media">◆ Media</span>
+        <span class="badge badge-gray">5 días</span>
+      </div>
+    </div>
+    <!-- HU13 -->
+    <div class="hu-card" style="border-left-color:#7c3aed">
+      <div class="hu-id" style="color:#7c3aed">HU13</div>
+      <div class="hu-title">Centro de Notificaciones</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">WebSocket, FCM, correos transaccionales, lectura/no lectura. RF80–RF84</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 9</span>
+        <span class="priority-alta">⬆ Alta</span>
+        <span class="badge badge-gray">5 días</span>
+      </div>
+    </div>
+    <!-- HU14 -->
+    <div class="hu-card" style="border-left-color:#059669">
+      <div class="hu-id" style="color:#059669">HU14</div>
+      <div class="hu-title">Búsqueda Avanzada</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:8px">Full-text search, filtros por fecha, RBAC en resultados. RF85–RF88</div>
+      <div class="hu-meta">
+        <span class="hu-sprint-badge">Sprint 9</span>
+        <span class="priority-media">◆ Media</span>
+        <span class="badge badge-gray">4 días</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     12. FLUJOS CLAVE
+══════════════════════════════════════ -->
+<div class="section" id="flow">
+  <div class="section-header">
+    <div class="section-icon" style="background:#eff6ff">🔄</div>
+    <div>
+      <div class="section-num">12 · Flujos Clave</div>
+      <div class="section-title">Procesos del Sistema</div>
+      <div class="section-desc">Los flujos más importantes implementados en el MVP</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:20px">
+    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px">🆕 Registro y Activación (HU01 — 2-step flow)</div>
+    <div class="card card-pad">
+      <div class="flow-steps" style="gap:12px">
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#7c3aed">1</div>
+          <div class="flow-step-title">Landing</div>
+          <div class="flow-step-sub">Usuario llega al portal público</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#7c3aed">2</div>
+          <div class="flow-step-title">Formulario Init</div>
+          <div class="flow-step-sub">Nombre, email, contraseña. Validación asíncrona email</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#7c3aed">3</div>
+          <div class="flow-step-title">Usuario inactivo</div>
+          <div class="flow-step-sub">BD: INSERT users (is_active=false) + token</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#7c3aed">4</div>
+          <div class="flow-step-title">Email enviado</div>
+          <div class="flow-step-sub">Link con token único (24h)</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#059669">5</div>
+          <div class="flow-step-title">Activación</div>
+          <div class="flow-step-sub">Nombre empresa, token validado</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#059669">6</div>
+          <div class="flow-step-title">Sandbox listo</div>
+          <div class="flow-step-sub">Usuario activo + Tenant + Rol ADMIN</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:20px">
+    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px">🎫 Ciclo de vida de un Ticket con IA</div>
+    <div class="card card-pad">
+      <div class="flow-steps" style="gap:12px">
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#2563eb">1</div>
+          <div class="flow-step-title">Descripción</div>
+          <div class="flow-step-sub">Colaborador redacta el problema</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#7c3aed">2</div>
+          <div class="flow-step-title">Gemini IA</div>
+          <div class="flow-step-sub">Triaje: área, prioridad, título, keywords</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#0891b2">3</div>
+          <div class="flow-step-title">Ticket ABIERTO</div>
+          <div class="flow-step-sub">Persiste en BD con metadata de IA</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#d97706">4</div>
+          <div class="flow-step-title">Técnico toma</div>
+          <div class="flow-step-sub">Autoasignación → EN PROCESO</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#dc2626">5</div>
+          <div class="flow-step-title">Propone resolución</div>
+          <div class="flow-step-sub">Técnico envía solución al cliente</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:#059669">6</div>
+          <div class="flow-step-title">Cierre y rating</div>
+          <div class="flow-step-sub">Cliente valida → calificación con estrellas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card card-pad">
+      <div style="font-weight:600;font-size:13px;margin-bottom:12px">📊 Estados de un Ticket</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge" style="background:#eff6ff;color:#1d4ed8;min-width:90px;justify-content:center">ABIERTO</span>
+          <span style="font-size:12px;color:#6b7280">Ticket creado, esperando técnico disponible</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge" style="background:#faf5ff;color:#6d28d9;min-width:90px;justify-content:center">ASIGNADO</span>
+          <span style="font-size:12px;color:#6b7280">Técnico tomó el ticket de la cola</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge" style="background:#fff7ed;color:#c2410c;min-width:90px;justify-content:center">EN PROCESO</span>
+          <span style="font-size:12px;color:#6b7280">Técnico trabajando activamente en el problema</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge" style="background:#ecfdf5;color:#065f46;min-width:90px;justify-content:center">RESUELTO</span>
+          <span style="font-size:12px;color:#6b7280">Cliente validó la solución propuesta</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge" style="background:#f3f4f6;color:#374151;min-width:90px;justify-content:center">CERRADO</span>
+          <span style="font-size:12px;color:#6b7280">Ticket cerrado. Sistema solicita calificación</span>
+        </div>
+      </div>
+    </div>
+    <div class="card card-pad">
+      <div style="font-weight:600;font-size:13px;margin-bottom:12px">🚦 Prioridades de Tickets</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-red" style="min-width:70px;justify-content:center">🔴 CRÍTICA</span>
+          <span style="font-size:12px;color:#6b7280">Afecta operación completa. Notificación a toda el área</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-orange" style="min-width:70px;justify-content:center">🟠 ALTA</span>
+          <span style="font-size:12px;color:#6b7280">Impacto significativo en productividad de una persona</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge" style="background:#fffbeb;color:#92400e;min-width:70px;justify-content:center">🟡 MEDIA</span>
+          <span style="font-size:12px;color:#6b7280">Funciona con limitaciones, puede esperar</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-green" style="min-width:70px;justify-content:center">🟢 BAJA</span>
+          <span style="font-size:12px;color:#6b7280">Mejora o consulta. Sin urgencia operativa</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     FOOTER
+══════════════════════════════════════ -->
+<div style="border-top:1px solid #e5e7eb;margin-top:32px;padding-top:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+  <div>
+    <div style="font-weight:700;font-size:16px;color:#1f2937">SmartDesk SaaS</div>
+    <div style="font-size:12px;color:#9ca3af;margin-top:2px">Arquitectura del Proyecto · Versión 1.0 · Sprint 1 · 2026</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <span class="badge badge-blue">Angular 17+</span>
+    <span class="badge badge-green">Spring Boot 3</span>
+    <span class="badge badge-purple">PostgreSQL 16</span>
+    <span class="badge badge-orange">Google Gemini</span>
+    <span class="badge badge-gray">Firebase FCM</span>
+  </div>
+</div>
+
+</div><!-- /content -->
+</body>
+</html>

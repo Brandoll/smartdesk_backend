@@ -21,7 +21,7 @@ public class User {
     private UUID id;
 
     @Column(nullable = false)
-    private String nombres;
+    private String name;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -29,10 +29,40 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Status status = Status.ACTIVO;
+
+    // Security: login attempt tracking
+    @Column(name = "failed_attempts")
+    @Builder.Default
+    private Integer failedAttempts = 0;
+
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public enum Role {
+        ADMIN_TENANT,
+        COLABORADOR_RESOLUTOR,
+        COLABORADOR
+    }
+
+    public enum Status {
+        INVITADO,
+        ACTIVO,
+        SUSPENDIDO
+    }
+
+    public boolean isAccountLocked() {
+        return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now());
+    }
 }

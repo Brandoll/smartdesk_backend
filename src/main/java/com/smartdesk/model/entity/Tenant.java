@@ -2,11 +2,13 @@ package com.smartdesk.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "tenants")
+@Table(name = "tenants", schema = "public")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,9 +20,16 @@ public class Tenant {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(name = "plan_type", nullable = false)
-    private String planType;
+    @Column(nullable = false, unique = true)
+    private String subdomain;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 }

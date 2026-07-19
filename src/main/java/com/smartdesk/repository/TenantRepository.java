@@ -1,6 +1,6 @@
 package com.smartdesk.repository;
 
-import com.smartdesk.model.entity.User;
+import com.smartdesk.model.entity.Tenant;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -8,6 +8,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, UUID> {
-    Optional<User> findByEmail(String email);
+public interface TenantRepository extends JpaRepository<Tenant, UUID> {
+    Optional<Tenant> findBySubdomain(String subdomain);
 }
