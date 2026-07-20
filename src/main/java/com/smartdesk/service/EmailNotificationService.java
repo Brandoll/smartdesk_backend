@@ -41,35 +41,41 @@ public class EmailNotificationService {
             <html>
             <head>
                 <style>
-                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f5f7; margin: 0; padding: 0; }
-                    .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-                    .header { background-color: #1a1b26; padding: 30px; text-align: center; }
-                    .header img { height: 40px; }
-                    .content { padding: 40px; color: #333333; line-height: 1.6; }
-                    .content h1 { font-size: 24px; font-weight: 600; color: #1a1b26; margin-top: 0; }
-                    .otp-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0; }
-                    .otp-code { font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #3b82f6; margin: 0; }
-                    .button { display: inline-block; background-color: #3b82f6; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 16px; margin-top: 10px; }
-                    .footer { text-align: center; padding: 20px; color: #888888; font-size: 14px; background-color: #f9fafb; border-top: 1px solid #f3f4f6; }
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+                    .header { background: linear-gradient(135deg, #F05023 0%%, #FF9A55 100%%); padding: 40px 30px; text-align: center; }
+                    .header-icon { background: #ffffff; width: 64px; height: 64px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+                    .header-icon img { height: 40px; width: auto; display: block; margin: auto; padding-top: 12px; }
+                    .header h2 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+                    .content { padding: 40px; color: #191c1d; line-height: 1.6; text-align: center; }
+                    .content h1 { font-size: 22px; font-weight: 600; color: #191c1d; margin-top: 0; margin-bottom: 16px; }
+                    .content p { font-size: 16px; color: #5b403d; margin-bottom: 24px; }
+                    .otp-box { background-color: #fffaf9; border: 1px dashed #F05023; border-radius: 12px; padding: 24px; text-align: center; margin: 32px 0; }
+                    .otp-code { font-family: monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #F05023; margin: 0; }
+                    .otp-label { font-size: 12px; color: #8f6f6c; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 8px; display: block; }
+                    .button { display: inline-block; background-color: #F05023; color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: 600; font-size: 16px; margin-top: 10px; box-shadow: 0 4px 12px rgba(240,80,35,0.25); transition: background-color 0.2s; }
+                    .footer { text-align: center; padding: 24px; color: #8f6f6c; font-size: 13px; background-color: #f3f4f5; border-top: 1px solid #e1e3e4; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <img src="https://smartdeskcloud.com/assets/logo-light.png" alt="SmartDesk Logo" onerror="this.src='https://placehold.co/200x50/1a1b26/ffffff?text=SmartDesk'"/>
+                        <div class="header-icon">
+                            <img src="https://smartdeskcloud.com/assets/logo-light.png" alt="SmartDesk Logo" onerror="this.src='https://placehold.co/40x40/F05023/ffffff?text=SD'"/>
+                        </div>
+                        <h2>SmartDesk</h2>
                     </div>
                     <div class="content">
-                        <h1>¡Bienvenido a SmartDesk, %s!</h1>
-                        <p>Estamos muy emocionados de tenerte a bordo. Para activar tu cuenta y configurar tu espacio de trabajo (Tenant), por favor ingresa el siguiente código de activación de 6 dígitos en la aplicación:</p>
+                        <h1>¡Bienvenido a tu nuevo espacio de trabajo, %s!</h1>
+                        <p>Estamos emocionados de tenerte con nosotros. Para activar tu entorno y comenzar a operar, por favor ingresa el siguiente código de activación en la aplicación:</p>
                         
                         <div class="otp-box">
+                            <span class="otp-label">Tu código de activación</span>
                             <p class="otp-code">%s</p>
                         </div>
                         
-                        <p>O si prefieres activar tu cuenta automáticamente, puedes hacer clic en el siguiente botón:</p>
-                        <center>
-                            <a href="%s" class="button">Activar Cuenta</a>
-                        </center>
+                        <p>O si prefieres activar tu cuenta automáticamente, haz clic en el siguiente botón:</p>
+                        <a href="%s" class="button">Activar y Entrar</a>
                     </div>
                     <div class="footer">
                         &copy; 2026 SmartDesk Cloud. Todos los derechos reservados.<br>
