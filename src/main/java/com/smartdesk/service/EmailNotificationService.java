@@ -41,50 +41,46 @@ public class EmailNotificationService {
             <html>
             <head>
                 <style>
-                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }
-                    .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
-                    .header { background: linear-gradient(135deg, #F05023 0%%, #FF9A55 100%%); padding: 40px 30px; text-align: center; }
-                    .header-icon { background: #ffffff; width: 64px; height: 64px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
-                    .header-icon img { height: 40px; width: auto; display: block; margin: auto; padding-top: 12px; }
-                    .header h2 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
-                    .content { padding: 40px; color: #191c1d; line-height: 1.6; text-align: center; }
-                    .content h1 { font-size: 22px; font-weight: 600; color: #191c1d; margin-top: 0; margin-bottom: 16px; }
-                    .content p { font-size: 16px; color: #5b403d; margin-bottom: 24px; }
-                    .otp-box { background-color: #fffaf9; border: 1px dashed #F05023; border-radius: 12px; padding: 24px; text-align: center; margin: 32px 0; }
-                    .otp-code { font-family: monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #F05023; margin: 0; }
-                    .otp-label { font-size: 12px; color: #8f6f6c; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 8px; display: block; }
-                    .button { display: inline-block; background-color: #F05023; color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: 600; font-size: 16px; margin-top: 10px; box-shadow: 0 4px 12px rgba(240,80,35,0.25); transition: background-color 0.2s; }
-                    .footer { text-align: center; padding: 24px; color: #8f6f6c; font-size: 13px; background-color: #f3f4f5; border-top: 1px solid #e1e3e4; }
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f5f7; margin: 0; padding: 0; }
+                    .container { max-width: 520px; margin: 60px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.04); border: 1px solid #e1e3e4; }
+                    .header { padding: 40px 30px 20px 30px; text-align: center; }
+                    .header img { height: 32px; width: auto; display: block; margin: 0 auto; }
+                    .content { padding: 0 40px 40px 40px; color: #191c1d; line-height: 1.6; text-align: center; }
+                    .content h1 { font-size: 20px; font-weight: 600; color: #191c1d; margin-top: 24px; margin-bottom: 12px; letter-spacing: -0.01em; }
+                    .content p { font-size: 15px; color: #4a4a4a; margin-bottom: 32px; }
+                    .otp-box { background-color: #f9fafb; border: 1px solid #e1e3e4; border-radius: 12px; padding: 24px; text-align: center; margin: 32px 0; }
+                    .otp-code { font-family: 'Courier New', Courier, monospace; font-size: 40px; font-weight: 700; letter-spacing: 12px; color: #F05023; margin: 0; }
+                    .otp-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600; margin-bottom: 12px; display: block; }
+                    .button { display: inline-block; background-color: #F05023; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; margin-top: 8px; transition: opacity 0.2s; }
+                    .divider { height: 1px; background-color: #f3f4f6; margin: 32px 0; }
+                    .footer { text-align: center; padding: 0 40px 40px 40px; color: #9ca3af; font-size: 12px; line-height: 1.5; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <div class="header-icon">
-                            <img src="https://www.smartdeskcloud.com/SmartDesk_small.png" alt="SmartDesk Logo" onerror="this.src='https://placehold.co/40x40/F05023/ffffff?text=SD'"/>
-                        </div>
-                        <h2>SmartDesk</h2>
+                        <img src="https://www.smartdeskcloud.com/SmartDesk_small.png" alt="SmartDesk Logo" onerror="this.src='https://placehold.co/120x32/ffffff/F05023?text=SmartDesk'"/>
                     </div>
                     <div class="content">
-                        <h1>¡Bienvenido a tu nuevo espacio de trabajo, %s!</h1>
-                        <p>Estamos emocionados de tenerte con nosotros. Para activar tu entorno y comenzar a operar, por favor ingresa el siguiente código de activación en la aplicación:</p>
+                        <h1>¡Hola, %s!</h1>
+                        <p>Bienvenido a SmartDesk. Para asegurar tu cuenta y activar tu entorno de trabajo, introduce el siguiente código en la pantalla de verificación:</p>
                         
                         <div class="otp-box">
-                            <span class="otp-label">Tu código de activación</span>
+                            <span class="otp-label">Código de Seguridad</span>
                             <p class="otp-code">%s</p>
                         </div>
                         
-                        <p>O si prefieres activar tu cuenta automáticamente, haz clic en el siguiente botón:</p>
-                        <a href="%s" class="button">Activar y Entrar</a>
+                        <a href="%s" class="button">Activar mi Entorno</a>
                     </div>
+                    <div class="divider"></div>
                     <div class="footer">
-                        &copy; 2026 SmartDesk Cloud. Todos los derechos reservados.<br>
-                        Si no solicitaste este correo, puedes ignorarlo de manera segura.
+                        SmartDesk Cloud &copy; 2026<br>
+                        Este es un mensaje automático. Si no solicitaste este registro, por favor ignora este correo.
                     </div>
                 </div>
             </body>
             </html>
-            """, frontendUrl, user.getName(), token.getShortCode(), activationLink);
+            """, user.getName(), token.getShortCode(), activationLink);
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("from", "SmartDesk <" + resendFromEmail + ">");
