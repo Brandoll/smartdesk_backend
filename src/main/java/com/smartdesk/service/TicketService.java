@@ -26,13 +26,16 @@ public class TicketService {
     private final TicketHistoryRepository ticketHistoryRepository;
     private final TicketMessageRepository ticketMessageRepository;
     private final AIClassifierService aiClassifierService;
+    private final com.smartdesk.config.websocket.NotificationWebSocketHandler notificationWebSocketHandler;
 
     public TicketService(TicketRepository ticketRepository, TicketHistoryRepository ticketHistoryRepository,
-                         TicketMessageRepository ticketMessageRepository, AIClassifierService aiClassifierService) {
+                         TicketMessageRepository ticketMessageRepository, AIClassifierService aiClassifierService,
+                         com.smartdesk.config.websocket.NotificationWebSocketHandler notificationWebSocketHandler) {
         this.ticketRepository = ticketRepository;
         this.ticketHistoryRepository = ticketHistoryRepository;
         this.ticketMessageRepository = ticketMessageRepository;
         this.aiClassifierService = aiClassifierService;
+        this.notificationWebSocketHandler = notificationWebSocketHandler;
     }
 
     public List<TicketHistory> getTicketHistory(UUID ticketId) {
@@ -90,6 +93,12 @@ public class TicketService {
             // Ticket created successfully, AI is optional
         }
 
+        // Send real-time notification to admins and resolutors
+        String messageStr = String.format("{\"type\":\"NEW_TICKET\",\"ticketId\":\"%s\",\"message\":\"Nuevo caso reportado: %s\"}", 
+            ticket.getId(), ticket.getTitle());
+        notificationWebSocketHandler.notifyRolesInTenant(TenantContext.getCurrentTenant(), 
+            new String[]{"ADMIN", "RESOLUTOR"}, messageStr);
+
         return mapToDTO(ticket);
     }
 
@@ -112,6 +121,12 @@ public class TicketService {
             if (dto.getStatus() == Ticket.Status.CERRADO) {
                 ticket.setClosedAt(LocalDateTime.now());
             }
+
+            // Send real-time notification to the ticket creator
+            String messageStr = String.format("{\"type\":\"STATUS_CHANGED\",\"ticketId\":\"%s\",\"message\":\"El estado de tu caso ha cambiado a %s\"}", 
+                ticket.getId(), dto.getStatus().name());
+            notificationWebSocketHandler.notifyUser(TenantContext.getCurrentTenant(), 
+                ticket.getClientId().toString(), messageStr);
         }
 
         // Priority change
