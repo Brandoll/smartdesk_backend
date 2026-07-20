@@ -61,7 +61,7 @@ public class EmailNotificationService {
                 <div class="container">
                     <div class="header">
                         <div class="header-icon">
-                            <img src="https://smartdeskcloud.com/assets/logo-light.png" alt="SmartDesk Logo" onerror="this.src='https://placehold.co/40x40/F05023/ffffff?text=SD'"/>
+                            <img src="%s/assets/logo-dark.png" alt="SmartDesk Logo" onerror="this.src='https://placehold.co/40x40/F05023/ffffff?text=SD'"/>
                         </div>
                         <h2>SmartDesk</h2>
                     </div>
@@ -84,7 +84,7 @@ public class EmailNotificationService {
                 </div>
             </body>
             </html>
-            """, user.getName(), token.getShortCode(), activationLink);
+            """, frontendUrl, user.getName(), token.getShortCode(), activationLink);
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("from", "SmartDesk <" + resendFromEmail + ">");
