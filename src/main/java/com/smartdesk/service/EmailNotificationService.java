@@ -61,7 +61,7 @@ public class EmailNotificationService {
                 <div class="container">
                     <div class="header">
                         <div class="header-icon">
-                            <img src="%s/assets/logo-dark.png" alt="SmartDesk Logo" onerror="this.src='https://placehold.co/40x40/F05023/ffffff?text=SD'"/>
+                            <img src="https://www.smartdeskcloud.com/SmartDesk_small.png" alt="SmartDesk Logo" onerror="this.src='https://placehold.co/40x40/F05023/ffffff?text=SD'"/>
                         </div>
                         <h2>SmartDesk</h2>
                     </div>
