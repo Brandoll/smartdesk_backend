@@ -94,10 +94,13 @@ public class TicketService {
         }
 
         // Send real-time notification to admins and resolutors
-        String messageStr = String.format("{\"type\":\"NEW_TICKET\",\"ticketId\":\"%s\",\"message\":\"Nuevo caso reportado: %s\"}", 
-            ticket.getId(), ticket.getTitle());
+        java.util.Map<String, String> payload = new java.util.HashMap<>();
+        payload.put("type", "NEW_TICKET");
+        payload.put("ticketId", ticket.getId().toString());
+        payload.put("message", "Nuevo caso reportado: " + ticket.getTitle());
+        
         notificationWebSocketHandler.notifyRolesInTenant(TenantContext.getCurrentTenant(), 
-            new String[]{"ADMIN", "RESOLUTOR"}, messageStr);
+            new String[]{"ADMIN", "RESOLUTOR"}, payload);
 
         return mapToDTO(ticket);
     }
@@ -123,10 +126,13 @@ public class TicketService {
             }
 
             // Send real-time notification to the ticket creator
-            String messageStr = String.format("{\"type\":\"STATUS_CHANGED\",\"ticketId\":\"%s\",\"message\":\"El estado de tu caso ha cambiado a %s\"}", 
-                ticket.getId(), dto.getStatus().name());
+            java.util.Map<String, String> payload = new java.util.HashMap<>();
+            payload.put("type", "STATUS_CHANGED");
+            payload.put("ticketId", ticket.getId().toString());
+            payload.put("message", "El estado de tu caso ha cambiado a " + dto.getStatus().name());
+            
             notificationWebSocketHandler.notifyUser(TenantContext.getCurrentTenant(), 
-                ticket.getClientId().toString(), messageStr);
+                ticket.getClientId().toString(), payload);
         }
 
         // Priority change
