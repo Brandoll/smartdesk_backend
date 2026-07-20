@@ -39,3 +39,6 @@ gemini:
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000}
+
+frontend:
+  url: ${FRONTEND_URL:http://localhost:4200}

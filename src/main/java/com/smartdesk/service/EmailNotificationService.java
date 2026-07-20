@@ -26,12 +26,15 @@ public class EmailNotificationService {
     @Value("${resend.from.email:onboarding@resend.dev}")
     private String resendFromEmail;
 
+    @Value("${frontend.url:http://localhost:4200}")
+    private String frontendUrl;
+
     public EmailNotificationService(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.baseUrl("https://api.resend.com").build();
     }
 
     public void sendVerificationEmail(User user, VerificationToken token) {
-        String activationLink = "http://localhost:4200/auth/verify?token=" + token.getToken();
+        String activationLink = frontendUrl + "/auth/verify?token=" + token.getToken();
         
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("from", "SmartDesk <" + resendFromEmail + ">");
