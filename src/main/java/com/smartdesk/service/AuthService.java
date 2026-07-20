@@ -134,9 +134,13 @@ public class AuthService {
             throw new RuntimeException("El correo ya está registrado");
         }
 
+        // Generate 6 digit code
+        String shortCode = String.format("%06d", new java.util.Random().nextInt(1000000));
+
         // Create verification token
         VerificationToken token = VerificationToken.builder()
                 .token(UUID.randomUUID().toString())
+                .shortCode(shortCode)
                 .email(dto.getEmail())
                 .name(dto.getName())
                 .password(passwordEncoder.encode(dto.getPassword()))
@@ -158,8 +162,8 @@ public class AuthService {
     public AuthResponseDTO activateTenant(ActivationDTO dto) {
         TenantContext.setCurrentTenant(TenantContext.DEFAULT_TENANT);
 
-        VerificationToken token = verificationTokenRepository.findByToken(dto.getToken())
-                .orElseThrow(() -> new RuntimeException("Token inválido"));
+        VerificationToken token = verificationTokenRepository.findByTokenOrShortCode(dto.getToken(), dto.getToken())
+                .orElseThrow(() -> new RuntimeException("Token o código de verificación inválido"));
 
         if (token.getUsed() || token.getExpiryDate().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("El token ha expirado o ya fue usado");

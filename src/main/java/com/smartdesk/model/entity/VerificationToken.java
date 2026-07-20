@@ -22,6 +22,9 @@ public class VerificationToken {
     @Column(nullable = false, unique = true)
     private String token;
 
+    @Column(name = "short_code", length = 6, unique = true)
+    private String shortCode;
+
     @Column(nullable = false)
     private String email;
 
