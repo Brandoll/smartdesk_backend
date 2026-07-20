@@ -32,6 +32,7 @@ public class TicketDTO {
     private UUID aiSuggestedAreaId;
     private Ticket.Priority aiSuggestedPriority;
     private Boolean aiClassified;
+    private String aiSuggestedSolution;
 
     // Resolution
     private String resolutionComment;

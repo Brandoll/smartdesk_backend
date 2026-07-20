@@ -43,8 +43,10 @@ public class AIClassifierService {
         if (ticket == null) return;
 
         String prompt = String.format(
-                "Eres un clasificador de tickets de soporte. Analiza el siguiente ticket y responde SOLO en formato JSON con estos campos: " +
-                "'suggestedPriority' (BAJA, MEDIA, ALTA, CRITICA), 'suggestedTitle' (título resumido del problema), 'suggestedCategory' (categoría del problema). " +
+                "Eres un clasificador de tickets de soporte técnico. Analiza el siguiente ticket y responde SOLO en formato JSON con estos campos: " +
+                "'suggestedPriority' (BAJA, MEDIA, ALTA, CRITICA), 'suggestedTitle' (título resumido del problema), " +
+                "'suggestedCategory' (categoría del problema), " +
+                "'suggestedSolution' (una solución detallada y práctica en español para resolver el problema del usuario, en 2-4 oraciones). " +
                 "No agregues explicación, solo el JSON.\n\n" +
                 "Título: %s\nDescripción: %s",
                 ticket.getTitle(), ticket.getDescription()
@@ -66,8 +68,36 @@ public class AIClassifierService {
                 .bodyToMono(String.class)
                 .doOnSuccess(response -> {
                     log.info("AI classification for ticket {}: {}", ticketId, response);
-                    // Mark as classified
                     ticket.setAiClassified(true);
+
+                    // Try to parse the AI response and extract suggestedSolution
+                    try {
+                        com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                        var root = om.readTree(response);
+                        var textNode = root.at("/candidates/0/content/parts/0/text");
+                        if (!textNode.isMissingNode()) {
+                            String jsonText = textNode.asText()
+                                .replaceAll("```json\\s*", "")
+                                .replaceAll("```\\s*", "")
+                                .trim();
+                            var parsed = om.readTree(jsonText);
+                            if (parsed.has("suggestedSolution")) {
+                                ticket.setAiSuggestedSolution(parsed.get("suggestedSolution").asText());
+                            }
+                            if (parsed.has("suggestedTitle")) {
+                                ticket.setAiSuggestedTitle(parsed.get("suggestedTitle").asText());
+                            }
+                            if (parsed.has("suggestedPriority")) {
+                                try {
+                                    ticket.setAiSuggestedPriority(
+                                        Ticket.Priority.valueOf(parsed.get("suggestedPriority").asText()));
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed to parse AI response JSON: {}", e.getMessage());
+                    }
+
                     ticketRepository.save(ticket);
 
                     // Record in history

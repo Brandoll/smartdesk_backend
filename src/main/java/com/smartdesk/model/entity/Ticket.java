@@ -61,6 +61,9 @@ public class Ticket {
     @Builder.Default
     private Boolean aiClassified = false;
 
+    @Column(name = "ai_suggested_solution", columnDefinition = "TEXT")
+    private String aiSuggestedSolution;
+
     // Resolution
     @Column(name = "resolution_comment", columnDefinition = "TEXT")
     private String resolutionComment;

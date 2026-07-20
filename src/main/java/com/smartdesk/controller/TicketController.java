@@ -27,8 +27,11 @@ public class TicketController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar tickets", description = "Obtiene los tickets paginados del tenant actual.")
-    public ResponseEntity<Page<TicketDTO>> getAll(Pageable pageable) {
+    @Operation(summary = "Listar tickets", description = "Obtiene los tickets paginados del tenant actual. Opcionalmente filtra por área.")
+    public ResponseEntity<Page<TicketDTO>> getAll(Pageable pageable, @RequestParam(required = false) UUID areaId) {
+        if (areaId != null) {
+            return ResponseEntity.ok(ticketService.getTicketsByArea(areaId, pageable));
+        }
         return ResponseEntity.ok(ticketService.getAllTickets(pageable));
     }
 

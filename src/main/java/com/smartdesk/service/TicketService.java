@@ -50,6 +50,10 @@ public class TicketService {
         return ticketRepository.findAll(pageable).map(this::mapToDTO);
     }
 
+    public Page<TicketDTO> getTicketsByArea(UUID areaId, Pageable pageable) {
+        return ticketRepository.findByAreaId(areaId, pageable).map(this::mapToDTO);
+    }
+
     public TicketDTO getTicketById(UUID id) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
@@ -240,6 +244,7 @@ public class TicketService {
         dto.setAiSuggestedAreaId(ticket.getAiSuggestedAreaId());
         dto.setAiSuggestedPriority(ticket.getAiSuggestedPriority());
         dto.setAiClassified(ticket.getAiClassified());
+        dto.setAiSuggestedSolution(ticket.getAiSuggestedSolution());
         dto.setResolutionComment(ticket.getResolutionComment());
         dto.setRating(ticket.getRating());
         dto.setRatingComment(ticket.getRatingComment());
