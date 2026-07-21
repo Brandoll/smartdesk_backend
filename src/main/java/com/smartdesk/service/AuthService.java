@@ -283,6 +283,7 @@ public class AuthService {
                 ai_suggested_area_id UUID,
                 ai_suggested_priority VARCHAR(50),
                 ai_classified BOOLEAN DEFAULT false,
+                ai_suggested_solution TEXT,
                 resolution_comment TEXT,
                 rating INTEGER CHECK (rating >= 1 AND rating <= 5),
                 rating_comment TEXT,
