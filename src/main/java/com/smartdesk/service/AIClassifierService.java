@@ -34,10 +34,10 @@ public class AIClassifierService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    @Value("${gemini.api.model:gemini-2.5-flash}")
+    @Value("${gemini.api.model:gemini-3.1-flash-lite}")
     private String geminiModel;
 
-    @Value("${gemini.api.fallback-model:gemini-2.5-flash-lite}")
+    @Value("${gemini.api.fallback-model:gemini-3.1-flash-lite}")
     private String geminiFallbackModel;
 
     public AIClassifierService(WebClient.Builder webClientBuilder, TicketRepository ticketRepository,

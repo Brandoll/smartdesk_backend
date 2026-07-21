@@ -68,10 +68,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     /** Broadcasts messages persisted through the REST endpoint as well. */
     public void broadcastMessage(UUID ticketId, TicketMessage ticketMessage) {
+        broadcastEvent(ticketId, ticketMessage);
+    }
+
+    public void broadcastEvent(UUID ticketId, Object event) {
         Map<String, WebSocketSession> sessions = ticketSessions.get(ticketId);
         if (sessions != null) {
             try {
-                String broadcastPayload = objectMapper.writeValueAsString(ticketMessage);
+                String broadcastPayload = objectMapper.writeValueAsString(event);
                 for (WebSocketSession s : sessions.values()) {
                     if (s.isOpen()) {
                         s.sendMessage(new TextMessage(broadcastPayload));

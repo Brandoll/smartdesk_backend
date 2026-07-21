@@ -200,6 +200,11 @@ public class TicketService {
         }
 
         ticket = ticketRepository.save(ticket);
+        UUID updatedTicketId = ticket.getId();
+        runAfterCommit(() -> chatWebSocketHandler.broadcastEvent(updatedTicketId, java.util.Map.of(
+                "type", "TICKET_UPDATED",
+                "ticketId", updatedTicketId.toString()
+        )));
         return mapToDTO(ticket);
     }
 
