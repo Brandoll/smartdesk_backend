@@ -18,7 +18,9 @@ import java.util.regex.Pattern;
 @Service
 public class TenantSchemaMigrationService {
 
-    private static final Pattern VALID_SCHEMA = Pattern.compile("[a-z0-9]+");
+    // PostgreSQL identifiers created by seed/import scripts may contain underscores.
+    // Keep the allow-list strict because the schema name is interpolated into DDL.
+    private static final Pattern VALID_SCHEMA = Pattern.compile("[a-z0-9_]+");
 
     private final JdbcTemplate jdbcTemplate;
 
