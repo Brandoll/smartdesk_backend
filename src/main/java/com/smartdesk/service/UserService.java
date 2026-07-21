@@ -162,7 +162,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         String schema = TenantContext.getCurrentTenant();
-        if (!schema.matches("[a-z0-9]+")) {
+        if (!schema.matches("[a-z0-9_]+")) {
             throw new RuntimeException("Tenant inválido");
         }
         String tenantSchema = "\"" + schema + "\"";
