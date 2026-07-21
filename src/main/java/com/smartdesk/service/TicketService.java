@@ -11,6 +11,8 @@ import com.smartdesk.repository.TicketRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -52,11 +54,11 @@ public class TicketService {
     }
 
     public Page<TicketDTO> getAllTickets(Pageable pageable) {
-        return ticketRepository.findAll(pageable).map(this::mapToDTO);
+        return ticketRepository.findAll(newestFirst(pageable)).map(this::mapToDTO);
     }
 
     public Page<TicketDTO> getTicketsByArea(UUID areaId, Pageable pageable) {
-        return ticketRepository.findByAreaId(areaId, pageable).map(this::mapToDTO);
+        return ticketRepository.findByAreaId(areaId, newestFirst(pageable)).map(this::mapToDTO);
     }
 
     public TicketDTO getTicketById(UUID id) {
@@ -302,5 +304,12 @@ public class TicketService {
         dto.setResolvedAt(ticket.getResolvedAt());
         dto.setClosedAt(ticket.getClosedAt());
         return dto;
+    }
+
+    private Pageable newestFirst(Pageable pageable) {
+        Sort sort = pageable.getSort().isSorted()
+                ? pageable.getSort()
+                : Sort.by(Sort.Direction.DESC, "createdAt");
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }

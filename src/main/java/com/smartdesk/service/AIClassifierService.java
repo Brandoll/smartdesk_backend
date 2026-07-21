@@ -12,6 +12,9 @@ import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.util.retry.Retry;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +36,9 @@ public class AIClassifierService {
 
     @Value("${gemini.api.model:gemini-2.5-flash}")
     private String geminiModel;
+
+    @Value("${gemini.api.fallback-model:gemini-2.5-flash-lite}")
+    private String geminiFallbackModel;
 
     public AIClassifierService(WebClient.Builder webClientBuilder, TicketRepository ticketRepository,
                                 TicketHistoryRepository ticketHistoryRepository,
@@ -70,14 +76,18 @@ public class AIClassifierService {
                 "generationConfig", Map.of("responseMimeType", "application/json")
         );
 
-            String response = webClient.post()
-                .uri("/" + geminiModel + ":generateContent")
-                .header("x-goog-api-key", geminiApiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
+            String response;
+            try {
+                response = generateContent(geminiModel, requestBody);
+            } catch (WebClientResponseException e) {
+                if (geminiFallbackModel.equals(geminiModel) || e.getStatusCode().value() == 401
+                        || e.getStatusCode().value() == 403) {
+                    throw e;
+                }
+                log.warn("Gemini model {} failed with status {}; trying fallback {}",
+                        geminiModel, e.getStatusCode().value(), geminiFallbackModel);
+                response = generateContent(geminiFallbackModel, requestBody);
+            }
 
             if (response == null) return;
             log.info("AI classification completed for ticket {}", ticketId);
@@ -132,14 +142,50 @@ public class AIClassifierService {
                     notification);
         } catch (Exception e) {
             log.error("AI classification error for ticket {}: {}", ticketId, e.getMessage(), e);
+            String reason = aiErrorReason(e);
             notificationWebSocketHandler.notifyRolesInTenant(
                     tenantId,
                     new String[]{"ADMIN_TENANT"},
                     Map.of("type", "AI_FAILED", "ticketId", ticketId.toString(),
-                            "message", "No se pudo generar la sugerencia de IA; se reintentará al abrir el caso"));
+                            "message", "No se pudo generar la sugerencia de IA: " + reason));
         } finally {
             classificationsInProgress.remove(ticketId);
             TenantContext.clear();
         }
+    }
+
+    private String generateContent(String model, Map<String, Object> requestBody) {
+        return webClient.post()
+                .uri("/" + model + ":generateContent")
+                .header("x-goog-api-key", geminiApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(String.class)
+                .retryWhen(Retry.backoff(2, Duration.ofSeconds(2))
+                        .filter(this::isTransientAiError)
+                        .onRetryExhaustedThrow((spec, signal) -> signal.failure()))
+                .block(Duration.ofSeconds(60));
+    }
+
+    private boolean isTransientAiError(Throwable error) {
+        if (!(error instanceof WebClientResponseException responseError)) return false;
+        int status = responseError.getStatusCode().value();
+        return status == 429 || status >= 500;
+    }
+
+    private String aiErrorReason(Exception error) {
+        if (error instanceof WebClientResponseException responseError) {
+            String body = responseError.getResponseBodyAsString();
+            try {
+                var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
+                String message = json.at("/error/message").asText();
+                if (!message.isBlank()) return "HTTP " + responseError.getStatusCode().value() + " - " + message;
+            } catch (Exception ignored) {
+                // Fall through to the status-only message.
+            }
+            return "HTTP " + responseError.getStatusCode().value();
+        }
+        return error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
     }
 }
