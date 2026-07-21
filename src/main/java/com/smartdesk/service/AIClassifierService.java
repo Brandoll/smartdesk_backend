@@ -5,6 +5,7 @@ import com.smartdesk.model.entity.Ticket;
 import com.smartdesk.model.entity.TicketHistory;
 import com.smartdesk.repository.TicketHistoryRepository;
 import com.smartdesk.repository.TicketRepository;
+import com.smartdesk.config.websocket.NotificationWebSocketHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -22,6 +23,7 @@ public class AIClassifierService {
     private final WebClient webClient;
     private final TicketRepository ticketRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
+    private final NotificationWebSocketHandler notificationWebSocketHandler;
 
     @Value("${gemini.api.key}")
     private String geminiApiKey;
@@ -30,10 +32,12 @@ public class AIClassifierService {
     private String geminiModel;
 
     public AIClassifierService(WebClient.Builder webClientBuilder, TicketRepository ticketRepository,
-                                TicketHistoryRepository ticketHistoryRepository) {
+                                TicketHistoryRepository ticketHistoryRepository,
+                                NotificationWebSocketHandler notificationWebSocketHandler) {
         this.webClient = webClientBuilder.baseUrl("https://generativelanguage.googleapis.com/v1beta/models").build();
         this.ticketRepository = ticketRepository;
         this.ticketHistoryRepository = ticketHistoryRepository;
+        this.notificationWebSocketHandler = notificationWebSocketHandler;
     }
 
     @Async
@@ -109,6 +113,14 @@ public class AIClassifierService {
                     .newValue(response)
                     .build();
             ticketHistoryRepository.save(history);
+
+            Map<String, String> notification = Map.of(
+                    "type", "AI_CLASSIFIED",
+                    "ticketId", ticketId.toString(),
+                    "message", "La sugerencia de IA ya está disponible"
+            );
+            notificationWebSocketHandler.notifyUser(
+                    tenantId, ticket.getClientId().toString(), notification);
         } catch (Exception e) {
             log.error("AI classification error for ticket {}: {}", ticketId, e.getMessage(), e);
         } finally {
