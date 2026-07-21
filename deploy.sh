@@ -59,5 +59,5 @@ fi
 
 echo "=========================================="
 echo "✅ ¡Backend desplegado correctamente!"
-echo "📍 Puerto expuesto: 8080"
+echo "📍 Puerto expuesto: 8081 (el contenedor usa 8080)"
 echo "=========================================="
