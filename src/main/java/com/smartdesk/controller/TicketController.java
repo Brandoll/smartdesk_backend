@@ -28,29 +28,38 @@ public class TicketController {
 
     @GetMapping
     @Operation(summary = "Listar tickets", description = "Obtiene los tickets paginados del tenant actual. Opcionalmente filtra por área.")
-    public ResponseEntity<Page<TicketDTO>> getAll(Pageable pageable, @RequestParam(required = false) UUID areaId) {
+    public ResponseEntity<Page<TicketDTO>> getAll(Pageable pageable, @RequestParam(required = false) UUID areaId,
+                                                   @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = userDetails.getUser().getId();
+        var role = userDetails.getUser().getRole();
         if (areaId != null) {
-            return ResponseEntity.ok(ticketService.getTicketsByArea(areaId, pageable));
+            return ResponseEntity.ok(ticketService.getTicketsByArea(areaId, pageable, userId, role));
         }
-        return ResponseEntity.ok(ticketService.getAllTickets(pageable));
+        return ResponseEntity.ok(ticketService.getAllTickets(pageable, userId, role));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener ticket", description = "Obtiene detalles de un ticket específico.")
-    public ResponseEntity<TicketDTO> getById(@PathVariable UUID id) {
-        return ResponseEntity.ok(ticketService.getTicketById(id));
+    public ResponseEntity<TicketDTO> getById(@PathVariable UUID id,
+                                              @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(ticketService.getTicketById(
+                id, userDetails.getUser().getId(), userDetails.getUser().getRole()));
     }
 
     @GetMapping("/{id}/history")
     @Operation(summary = "Obtener historial de ticket", description = "Obtiene el historial de eventos de un ticket específico.")
-    public ResponseEntity<List<com.smartdesk.model.entity.TicketHistory>> getHistory(@PathVariable UUID id) {
-        return ResponseEntity.ok(ticketService.getTicketHistory(id));
+    public ResponseEntity<List<com.smartdesk.model.entity.TicketHistory>> getHistory(
+            @PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(ticketService.getTicketHistory(
+                id, userDetails.getUser().getId(), userDetails.getUser().getRole()));
     }
 
     @GetMapping("/{id}/messages")
     @Operation(summary = "Obtener mensajes de ticket", description = "Obtiene los mensajes de chat de un ticket específico.")
-    public ResponseEntity<List<com.smartdesk.model.entity.TicketMessage>> getMessages(@PathVariable UUID id) {
-        return ResponseEntity.ok(ticketService.getTicketMessages(id));
+    public ResponseEntity<List<com.smartdesk.model.entity.TicketMessage>> getMessages(
+            @PathVariable UUID id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(ticketService.getTicketMessages(
+                id, userDetails.getUser().getId(), userDetails.getUser().getRole()));
     }
 
     @PostMapping
@@ -64,7 +73,7 @@ public class TicketController {
     @Operation(summary = "Actualizar ticket", description = "Actualiza el estado, prioridad o asignación de un ticket.")
     public ResponseEntity<TicketDTO> update(@PathVariable UUID id, @Valid @RequestBody TicketDTO dto, @AuthenticationPrincipal CustomUserDetails userDetails) {
         UUID updaterId = userDetails != null ? userDetails.getUser().getId() : null;
-        return ResponseEntity.ok(ticketService.updateTicket(id, dto, updaterId));
+        return ResponseEntity.ok(ticketService.updateTicket(id, dto, updaterId, userDetails.getUser().getRole()));
     }
 
     @PostMapping("/{id}/messages")
@@ -77,6 +86,7 @@ public class TicketController {
         Boolean isInternal = body.get("isInternal") != null ? (Boolean) body.get("isInternal") : false;
         UUID userId = userDetails != null ? userDetails.getUser().getId() : null;
         String senderName = userDetails != null ? userDetails.getUser().getName() : "Unknown";
-        return ResponseEntity.ok(ticketService.addMessage(id, userId, message, isInternal, senderName));
+        return ResponseEntity.ok(ticketService.addMessage(
+                id, userId, userDetails.getUser().getRole(), message, isInternal, senderName));
     }
 }

@@ -12,6 +12,7 @@ import java.util.UUID;
 @Repository
 public interface TicketRepository extends JpaRepository<Ticket, UUID>, JpaSpecificationExecutor<Ticket> {
     Page<Ticket> findByClientId(UUID clientId, Pageable pageable);
+    Page<Ticket> findByClientIdAndAreaId(UUID clientId, UUID areaId, Pageable pageable);
     Page<Ticket> findByAssignedToId(UUID assignedToId, Pageable pageable);
     Page<Ticket> findByAreaId(UUID areaId, Pageable pageable);
     Page<Ticket> findByStatus(Ticket.Status status, Pageable pageable);

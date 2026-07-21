@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface TicketMessageRepository extends JpaRepository<TicketMessage, UUID> {
     List<TicketMessage> findByTicketIdOrderByCreatedAtAsc(UUID ticketId);
+    List<TicketMessage> findByTicketIdAndIsInternalFalseOrderByCreatedAtAsc(UUID ticketId);
 }

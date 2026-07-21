@@ -5,6 +5,7 @@ import com.smartdesk.model.dto.TicketDTO;
 import com.smartdesk.model.entity.Ticket;
 import com.smartdesk.model.entity.TicketHistory;
 import com.smartdesk.model.entity.TicketMessage;
+import com.smartdesk.model.entity.User;
 import com.smartdesk.repository.TicketHistoryRepository;
 import com.smartdesk.repository.TicketMessageRepository;
 import com.smartdesk.repository.TicketRepository;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -45,25 +47,35 @@ public class TicketService {
         this.chatWebSocketHandler = chatWebSocketHandler;
     }
 
-    public List<TicketHistory> getTicketHistory(UUID ticketId) {
+    public List<TicketHistory> getTicketHistory(UUID ticketId, UUID requesterId, User.Role role) {
+        requireTicketAccess(ticketId, requesterId, role);
         return ticketHistoryRepository.findByTicketIdOrderByTimestampAsc(ticketId);
     }
 
-    public List<TicketMessage> getTicketMessages(UUID ticketId) {
+    public List<TicketMessage> getTicketMessages(UUID ticketId, UUID requesterId, User.Role role) {
+        requireTicketAccess(ticketId, requesterId, role);
+        if (role == User.Role.COLABORADOR) {
+            return ticketMessageRepository.findByTicketIdAndIsInternalFalseOrderByCreatedAtAsc(ticketId);
+        }
         return ticketMessageRepository.findByTicketIdOrderByCreatedAtAsc(ticketId);
     }
 
-    public Page<TicketDTO> getAllTickets(Pageable pageable) {
+    public Page<TicketDTO> getAllTickets(Pageable pageable, UUID requesterId, User.Role role) {
+        if (role == User.Role.COLABORADOR) {
+            return ticketRepository.findByClientId(requesterId, newestFirst(pageable)).map(this::mapToDTO);
+        }
         return ticketRepository.findAll(newestFirst(pageable)).map(this::mapToDTO);
     }
 
-    public Page<TicketDTO> getTicketsByArea(UUID areaId, Pageable pageable) {
+    public Page<TicketDTO> getTicketsByArea(UUID areaId, Pageable pageable, UUID requesterId, User.Role role) {
+        if (role == User.Role.COLABORADOR) {
+            return ticketRepository.findByClientIdAndAreaId(requesterId, areaId, newestFirst(pageable)).map(this::mapToDTO);
+        }
         return ticketRepository.findByAreaId(areaId, newestFirst(pageable)).map(this::mapToDTO);
     }
 
-    public TicketDTO getTicketById(UUID id) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+    public TicketDTO getTicketById(UUID id, UUID requesterId, User.Role role) {
+        Ticket ticket = requireTicketAccess(id, requesterId, role);
         if (!Boolean.TRUE.equals(ticket.getAiClassified())) {
             aiClassifierService.classifyTicketAsync(id, TenantContext.getCurrentTenant());
         }
@@ -119,9 +131,10 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketDTO updateTicket(UUID id, TicketDTO dto, UUID updaterId) {
+    public TicketDTO updateTicket(UUID id, TicketDTO dto, UUID updaterId, User.Role updaterRole) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+        assertTicketAccess(ticket, updaterId, updaterRole);
         String tenantId = TenantContext.getCurrentTenant();
 
         // Status change with validation
@@ -209,10 +222,11 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketMessage addMessage(UUID ticketId, UUID userId, String message, boolean isInternal, String senderName) {
+    public TicketMessage addMessage(UUID ticketId, UUID userId, User.Role role, String message,
+                                    boolean isInternal, String senderName) {
         // Verify ticket exists
-        ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+        requireTicketAccess(ticketId, userId, role);
+        if (role == User.Role.COLABORADOR) isInternal = false;
 
         TicketMessage msg = new TicketMessage();
         msg.setTicketId(ticketId);
@@ -250,6 +264,20 @@ public class TicketService {
         history.setOldValue(oldVal);
         history.setNewValue(newVal);
         ticketHistoryRepository.save(history);
+    }
+
+    private Ticket requireTicketAccess(UUID ticketId, UUID requesterId, User.Role role) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+        assertTicketAccess(ticket, requesterId, role);
+        return ticket;
+    }
+
+    private void assertTicketAccess(Ticket ticket, UUID requesterId, User.Role role) {
+        boolean privileged = role == User.Role.ADMIN_TENANT || role == User.Role.COLABORADOR_RESOLUTOR;
+        if (!privileged && (requesterId == null || !requesterId.equals(ticket.getClientId()))) {
+            throw new AccessDeniedException("No tienes acceso a este ticket");
+        }
     }
 
     private void notifyUserAfterCommit(String tenantId, UUID userId, String type,
