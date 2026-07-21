@@ -9,6 +9,8 @@ import com.smartdesk.model.entity.User;
 import com.smartdesk.repository.TicketHistoryRepository;
 import com.smartdesk.repository.TicketMessageRepository;
 import com.smartdesk.repository.TicketRepository;
+import com.smartdesk.repository.AreaRepository;
+import com.smartdesk.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +24,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,17 +36,22 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
     private final TicketMessageRepository ticketMessageRepository;
+    private final AreaRepository areaRepository;
+    private final UserRepository userRepository;
     private final AIClassifierService aiClassifierService;
     private final com.smartdesk.config.websocket.NotificationWebSocketHandler notificationWebSocketHandler;
     private final com.smartdesk.config.websocket.ChatWebSocketHandler chatWebSocketHandler;
 
     public TicketService(TicketRepository ticketRepository, TicketHistoryRepository ticketHistoryRepository,
-                         TicketMessageRepository ticketMessageRepository, AIClassifierService aiClassifierService,
+                         TicketMessageRepository ticketMessageRepository, AreaRepository areaRepository,
+                         UserRepository userRepository, AIClassifierService aiClassifierService,
                          com.smartdesk.config.websocket.NotificationWebSocketHandler notificationWebSocketHandler,
                          com.smartdesk.config.websocket.ChatWebSocketHandler chatWebSocketHandler) {
         this.ticketRepository = ticketRepository;
         this.ticketHistoryRepository = ticketHistoryRepository;
         this.ticketMessageRepository = ticketMessageRepository;
+        this.areaRepository = areaRepository;
+        this.userRepository = userRepository;
         this.aiClassifierService = aiClassifierService;
         this.notificationWebSocketHandler = notificationWebSocketHandler;
         this.chatWebSocketHandler = chatWebSocketHandler;
@@ -61,17 +71,23 @@ public class TicketService {
     }
 
     public Page<TicketDTO> getAllTickets(Pageable pageable, UUID requesterId, User.Role role) {
+        Page<Ticket> tickets;
         if (role == User.Role.COLABORADOR) {
-            return ticketRepository.findByClientId(requesterId, newestFirst(pageable)).map(this::mapToDTO);
+            tickets = ticketRepository.findByClientId(requesterId, newestFirst(pageable));
+        } else {
+            tickets = ticketRepository.findAll(newestFirst(pageable));
         }
-        return ticketRepository.findAll(newestFirst(pageable)).map(this::mapToDTO);
+        return mapPageToDTO(tickets);
     }
 
     public Page<TicketDTO> getTicketsByArea(UUID areaId, Pageable pageable, UUID requesterId, User.Role role) {
+        Page<Ticket> tickets;
         if (role == User.Role.COLABORADOR) {
-            return ticketRepository.findByClientIdAndAreaId(requesterId, areaId, newestFirst(pageable)).map(this::mapToDTO);
+            tickets = ticketRepository.findByClientIdAndAreaId(requesterId, areaId, newestFirst(pageable));
+        } else {
+            tickets = ticketRepository.findByAreaId(areaId, newestFirst(pageable));
         }
-        return ticketRepository.findByAreaId(areaId, newestFirst(pageable)).map(this::mapToDTO);
+        return mapPageToDTO(tickets);
     }
 
     public TicketDTO getTicketById(UUID id, UUID requesterId, User.Role role) {
@@ -314,7 +330,24 @@ public class TicketService {
         }
     }
 
+    private Page<TicketDTO> mapPageToDTO(Page<Ticket> tickets) {
+        Set<UUID> userIds = tickets.stream().map(Ticket::getAssignedToId)
+                .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        Set<UUID> areaIds = tickets.stream().map(Ticket::getAreaId)
+                .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        Map<UUID, String> userNames = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, User::getName));
+        Map<UUID, String> areaNames = areaRepository.findAllById(areaIds).stream()
+                .collect(Collectors.toMap(com.smartdesk.model.entity.Area::getId,
+                        com.smartdesk.model.entity.Area::getName));
+        return tickets.map(ticket -> mapToDTO(ticket, userNames, areaNames));
+    }
+
     private TicketDTO mapToDTO(Ticket ticket) {
+        return mapToDTO(ticket, null, null);
+    }
+
+    private TicketDTO mapToDTO(Ticket ticket, Map<UUID, String> userNames, Map<UUID, String> areaNames) {
         TicketDTO dto = new TicketDTO();
         dto.setId(ticket.getId());
         dto.setTitle(ticket.getTitle());
@@ -324,6 +357,16 @@ public class TicketService {
         dto.setClientId(ticket.getClientId());
         dto.setAssignedToId(ticket.getAssignedToId());
         dto.setAreaId(ticket.getAreaId());
+        if (ticket.getAssignedToId() != null) {
+            if (userNames != null) dto.setAssignedToName(userNames.get(ticket.getAssignedToId()));
+            else userRepository.findById(ticket.getAssignedToId())
+                        .ifPresent(user -> dto.setAssignedToName(user.getName()));
+        }
+        if (ticket.getAreaId() != null) {
+            if (areaNames != null) dto.setAreaName(areaNames.get(ticket.getAreaId()));
+            else areaRepository.findById(ticket.getAreaId())
+                        .ifPresent(area -> dto.setAreaName(area.getName()));
+        }
         dto.setAiSuggestedTitle(ticket.getAiSuggestedTitle());
         dto.setAiSuggestedAreaId(ticket.getAiSuggestedAreaId());
         dto.setAiSuggestedPriority(ticket.getAiSuggestedPriority());

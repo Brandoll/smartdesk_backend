@@ -26,6 +26,8 @@ public class TicketDTO {
 
     private UUID assignedToId;
     private UUID areaId;
+    private String assignedToName;
+    private String areaName;
 
     // AI suggestions (read-only, returned by backend)
     private String aiSuggestedTitle;
