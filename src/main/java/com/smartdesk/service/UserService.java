@@ -152,6 +152,39 @@ public class UserService {
         return mapToDTO(user);
     }
 
+    @Transactional
+    public void deleteUser(UUID id, UUID requesterId) {
+        if (id.equals(requesterId)) {
+            throw new RuntimeException("No puedes eliminar tu propia cuenta");
+        }
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        String schema = TenantContext.getCurrentTenant();
+        if (!schema.matches("[a-z0-9]+")) {
+            throw new RuntimeException("Tenant inválido");
+        }
+        String tenantSchema = "\"" + schema + "\"";
+        String referenceSql = """
+                SELECT
+                  (SELECT COUNT(*) FROM %s.tickets WHERE client_id = ? OR assigned_to_id = ?) +
+                  (SELECT COUNT(*) FROM %s.ticket_messages WHERE user_id = ?) +
+                  (SELECT COUNT(*) FROM %s.ticket_history WHERE user_id = ?) +
+                  (SELECT COUNT(*) FROM %s.ticket_attachments WHERE user_id = ?)
+                """.formatted(tenantSchema, tenantSchema, tenantSchema, tenantSchema);
+        Long references = jdbcTemplate.queryForObject(referenceSql, Long.class, id, id, id, id, id);
+
+        if (references != null && references > 0) {
+            throw new RuntimeException(
+                    "El colaborador tiene actividad vinculada y no puede eliminarse. Puedes cambiar su estado a SUSPENDIDO.");
+        }
+
+        userAreaRepository.deleteByUserId(id);
+        userRepository.delete(user);
+        jdbcTemplate.update("DELETE FROM public.user_global WHERE email = ?", user.getEmail());
+    }
+
     private UserDTO mapToDTO(User user) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());

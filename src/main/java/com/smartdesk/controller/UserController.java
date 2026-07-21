@@ -1,5 +1,6 @@
 package com.smartdesk.controller;
 
+import com.smartdesk.config.security.CustomUserDetails;
 import com.smartdesk.model.dto.UserDTO;
 import com.smartdesk.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,5 +51,13 @@ public class UserController {
     @Operation(summary = "Actualizar usuario", description = "Actualiza los detalles de un usuario.")
     public ResponseEntity<UserDTO> update(@PathVariable UUID id, @Valid @RequestBody UserDTO dto) {
         return ResponseEntity.ok(userService.updateUser(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Eliminar usuario", description = "Elimina un colaborador sin actividad vinculada. Los usuarios con historial deben suspenderse.")
+    public ResponseEntity<Void> delete(@PathVariable UUID id,
+                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
+        userService.deleteUser(id, userDetails.getUser().getId());
+        return ResponseEntity.noContent().build();
     }
 }

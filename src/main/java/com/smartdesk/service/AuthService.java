@@ -107,6 +107,9 @@ public class AuthService {
         // Successful login - reset failed attempts
         user.setFailedAttempts(0);
         user.setLockedUntil(null);
+        if (user.getStatus() == User.Status.INVITADO) {
+            user.setStatus(User.Status.ACTIVO);
+        }
         userRepository.save(user);
 
         // 3. Generate JWT
