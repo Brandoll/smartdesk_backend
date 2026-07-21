@@ -38,6 +38,7 @@ resend:
 gemini:
   api:
     key: ${GEMINI_API_KEY:gemini_fake_key_123}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000}

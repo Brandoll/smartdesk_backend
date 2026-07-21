@@ -11,8 +11,6 @@ import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,6 +26,9 @@ public class AIClassifierService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
+    @Value("${gemini.api.model:gemini-2.5-flash}")
+    private String geminiModel;
+
     public AIClassifierService(WebClient.Builder webClientBuilder, TicketRepository ticketRepository,
                                 TicketHistoryRepository ticketHistoryRepository) {
         this.webClient = webClientBuilder.baseUrl("https://generativelanguage.googleapis.com/v1beta/models").build();
@@ -38,9 +39,9 @@ public class AIClassifierService {
     @Async
     public void classifyTicketAsync(UUID ticketId, String tenantId) {
         TenantContext.setCurrentTenant(tenantId);
-
-        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
-        if (ticket == null) return;
+        try {
+            Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+            if (ticket == null) return;
 
         String prompt = String.format(
                 "Eres un clasificador de tickets de soporte técnico. Analiza el siguiente ticket y responde SOLO en formato JSON con estos campos: " +
@@ -60,18 +61,20 @@ public class AIClassifierService {
                 )
         );
 
-        webClient.post()
-                .uri("/gemini-1.5-pro:generateContent?key=" + geminiApiKey)
+            String response = webClient.post()
+                .uri("/" + geminiModel + ":generateContent")
+                .header("x-goog-api-key", geminiApiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnSuccess(response -> {
-                    log.info("AI classification for ticket {}: {}", ticketId, response);
-                    ticket.setAiClassified(true);
+                .block();
 
-                    // Try to parse the AI response and extract suggestedSolution
-                    try {
+            if (response == null) return;
+            log.info("AI classification completed for ticket {}", ticketId);
+            ticket.setAiClassified(true);
+
+            try {
                         com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
                         var root = om.readTree(response);
                         var textNode = root.at("/candidates/0/content/parts/0/text");
@@ -94,22 +97,22 @@ public class AIClassifierService {
                                 } catch (Exception ignored) {}
                             }
                         }
-                    } catch (Exception e) {
-                        log.warn("Failed to parse AI response JSON: {}", e.getMessage());
-                    }
+            } catch (Exception e) {
+                log.warn("Failed to parse AI response JSON: {}", e.getMessage());
+            }
 
-                    ticketRepository.save(ticket);
+            ticketRepository.save(ticket);
 
-                    // Record in history
-                    TicketHistory history = TicketHistory.builder()
-                            .ticketId(ticketId)
-                            .eventType(TicketHistory.EventType.AI_CLASSIFIED)
-                            .newValue(response)
-                            .build();
-                    ticketHistoryRepository.save(history);
-                })
-                .doOnError(e -> log.error("AI classification error: {}", e.getMessage()))
-                .onErrorResume(e -> Mono.empty())
-                .subscribe();
+            TicketHistory history = TicketHistory.builder()
+                    .ticketId(ticketId)
+                    .eventType(TicketHistory.EventType.AI_CLASSIFIED)
+                    .newValue(response)
+                    .build();
+            ticketHistoryRepository.save(history);
+        } catch (Exception e) {
+            log.error("AI classification error for ticket {}: {}", ticketId, e.getMessage(), e);
+        } finally {
+            TenantContext.clear();
+        }
     }
 }

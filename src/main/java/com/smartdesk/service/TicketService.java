@@ -13,6 +13,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,15 +29,18 @@ public class TicketService {
     private final TicketMessageRepository ticketMessageRepository;
     private final AIClassifierService aiClassifierService;
     private final com.smartdesk.config.websocket.NotificationWebSocketHandler notificationWebSocketHandler;
+    private final com.smartdesk.config.websocket.ChatWebSocketHandler chatWebSocketHandler;
 
     public TicketService(TicketRepository ticketRepository, TicketHistoryRepository ticketHistoryRepository,
                          TicketMessageRepository ticketMessageRepository, AIClassifierService aiClassifierService,
-                         com.smartdesk.config.websocket.NotificationWebSocketHandler notificationWebSocketHandler) {
+                         com.smartdesk.config.websocket.NotificationWebSocketHandler notificationWebSocketHandler,
+                         com.smartdesk.config.websocket.ChatWebSocketHandler chatWebSocketHandler) {
         this.ticketRepository = ticketRepository;
         this.ticketHistoryRepository = ticketHistoryRepository;
         this.ticketMessageRepository = ticketMessageRepository;
         this.aiClassifierService = aiClassifierService;
         this.notificationWebSocketHandler = notificationWebSocketHandler;
+        this.chatWebSocketHandler = chatWebSocketHandler;
     }
 
     public List<TicketHistory> getTicketHistory(UUID ticketId) {
@@ -89,13 +94,16 @@ public class TicketService {
         // Record in history
         saveHistory(ticket.getId(), creatorId, TicketHistory.EventType.TICKET_CREATED, null, "Ticket creado");
 
-        // Trigger async AI classification
-        try {
-            aiClassifierService.classifyTicketAsync(ticket.getId(), TenantContext.getCurrentTenant());
-        } catch (Exception e) {
-            log.warn("AI classification failed for ticket {}: {}", ticket.getId(), e.getMessage());
-            // Ticket created successfully, AI is optional
-        }
+        // Run AI only after the ticket transaction commits, so the async thread
+        // can read the newly-created row from the tenant schema.
+        UUID ticketId = ticket.getId();
+        String tenantId = TenantContext.getCurrentTenant();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                aiClassifierService.classifyTicketAsync(ticketId, tenantId);
+            }
+        });
 
         // Send real-time notification to admins and resolutors
         java.util.Map<String, String> payload = new java.util.HashMap<>();
@@ -104,7 +112,7 @@ public class TicketService {
         payload.put("message", "Nuevo caso reportado: " + ticket.getTitle());
         
         notificationWebSocketHandler.notifyRolesInTenant(TenantContext.getCurrentTenant(), 
-            new String[]{"ADMIN", "RESOLUTOR"}, payload);
+            new String[]{"ADMIN_TENANT", "COLABORADOR_RESOLUTOR"}, payload);
 
         return mapToDTO(ticket);
     }
@@ -201,7 +209,9 @@ public class TicketService {
         msg.setIsInternal(isInternal);
         msg.setSenderType(TicketMessage.SenderType.USER);
         msg.setSenderName(senderName);
-        return ticketMessageRepository.save(msg);
+        msg = ticketMessageRepository.save(msg);
+        chatWebSocketHandler.broadcastMessage(ticketId, msg);
+        return msg;
     }
 
     private void validateStatusTransition(Ticket.Status current, Ticket.Status next) {
