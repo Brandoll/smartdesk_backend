@@ -3,8 +3,10 @@ spring:
     name: smartdesk-backend
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/smartdesk_db}
-    username: ${DATABASE_USER:postgres}
-    password: ${DATABASE_PASSWORD:postgres}
+    # Accept both the documented DATABASE_* names and the legacy DB_* names
+    # already used by this project's .env file.
+    username: ${DATABASE_USER:${DB_USERNAME:postgres}}
+    password: ${DATABASE_PASSWORD:${DB_PASSWORD:postgres}}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

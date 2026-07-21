@@ -24,7 +24,9 @@ echo "Creando archivo .env..."
 cat <<EOF > .env
 # Configuración de Base de Datos
 DATABASE_USER=postgres
+DB_USERNAME=postgres
 DATABASE_PASSWORD=${DB_PASSWORD}
+DB_PASSWORD=${DB_PASSWORD}
 DATABASE_URL=jdbc:postgresql://db:5432/smartdesk_db
 
 # Configuración del Servidor
@@ -57,5 +59,5 @@ fi
 
 echo "=========================================="
 echo "✅ ¡Backend desplegado correctamente!"
-echo "📍 Puerto expuesto: 8081 (El contenedor interno usa 8080)"
+echo "📍 Puerto expuesto: 8080"
 echo "=========================================="
