@@ -32,6 +32,7 @@ DATABASE_URL=jdbc:postgresql://db:5432/smartdesk_db
 # Configuración del Servidor
 PORT=8080
 CORS_ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+FRONTEND_URL=https://www.smartdeskcloud.com
 
 # Configuración de Seguridad
 JWT_SECRET=${JWT_SECRET}

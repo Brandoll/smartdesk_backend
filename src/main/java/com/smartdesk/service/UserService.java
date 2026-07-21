@@ -14,6 +14,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -30,15 +32,17 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final TenantRepository tenantRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final EmailNotificationService emailNotificationService;
 
     public UserService(UserRepository userRepository, UserAreaRepository userAreaRepository,
                        PasswordEncoder passwordEncoder, TenantRepository tenantRepository,
-                       JdbcTemplate jdbcTemplate) {
+                       JdbcTemplate jdbcTemplate, EmailNotificationService emailNotificationService) {
         this.userRepository = userRepository;
         this.userAreaRepository = userAreaRepository;
         this.passwordEncoder = passwordEncoder;
         this.tenantRepository = tenantRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.emailNotificationService = emailNotificationService;
     }
 
     public Page<UserDTO> getAllUsers(Pageable pageable) {
@@ -87,8 +91,8 @@ public class UserService {
         }
 
         // 3. Register in public.user_global via JdbcTemplate (reliable, bypasses Hibernate context)
+        var tenant = tenantRepository.findBySubdomain(currentTenant);
         try {
-            var tenant = tenantRepository.findBySubdomain(currentTenant);
             if (tenant.isPresent()) {
                 jdbcTemplate.update(
                     "INSERT INTO public.user_global (id, email, tenant_id) VALUES (?, ?, ?)",
@@ -102,6 +106,18 @@ public class UserService {
             log.error("Error registering user in user_global: {}", e.getMessage());
             // Don't fail the whole operation - user is created in tenant
         }
+
+        String invitationName = user.getName();
+        String invitationEmail = user.getEmail();
+        User.Role invitationRole = user.getRole();
+        String invitationCompany = tenant.map(value -> value.getName()).orElse("SmartDesk");
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                emailNotificationService.sendCollaboratorInvitationEmail(
+                        invitationName, invitationEmail, password, invitationRole, invitationCompany);
+            }
+        });
 
         return mapToDTO(user);
     }

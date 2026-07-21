@@ -102,4 +102,66 @@ public class EmailNotificationService {
                 .onErrorResume(e -> Mono.empty())
                 .subscribe();
     }
+
+    public void sendCollaboratorInvitationEmail(String name, String email, String temporaryPassword,
+                                                User.Role role, String companyName) {
+        String loginLink = frontendUrl + "/auth/login";
+        String roleLabel = switch (role) {
+            case ADMIN_TENANT -> "Administrador";
+            case COLABORADOR_RESOLUTOR -> "Resolutor";
+            case COLABORADOR -> "Colaborador";
+        };
+
+        String htmlContent = String.format("""
+            <!DOCTYPE html><html><head><style>
+              body { font-family:'Helvetica Neue',Arial,sans-serif; background:#f4f5f7; margin:0; padding:40px 0; }
+              .container { max-width:540px; margin:auto; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 12px 32px rgba(0,0,0,.06); }
+              .gradient-bar { height:8px; background:linear-gradient(135deg,#F05023 0%%,#FF9A55 100%%); }
+              .header { padding:40px 30px 20px; text-align:center; }
+              .header img { height:60px; width:auto; }
+              .content { padding:0 48px 40px; color:#191c1d; line-height:1.6; text-align:center; }
+              h1 { font-size:24px; margin:16px 0 12px; }
+              p { color:#4a4a4a; }
+              .credentials { background:linear-gradient(180deg,#fff 0%%,#fff5f2 100%%); border:1px solid #ffe6de; border-radius:16px; padding:24px; margin:28px 0; text-align:left; }
+              .row { margin:12px 0; }
+              .label { display:block; color:#F05023; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+              .value { display:block; margin-top:4px; color:#191c1d; font-family:'Courier New',monospace; font-size:16px; overflow-wrap:anywhere; }
+              .button { display:inline-block; background:linear-gradient(135deg,#F05023,#FF9A55); color:#fff !important; text-decoration:none; padding:16px 32px; border-radius:9999px; font-weight:600; }
+              .warning { font-size:13px; color:#7c2d12; background:#fff7ed; padding:12px; border-radius:10px; margin-top:20px; }
+              .footer { border-top:1px solid #f3f4f6; text-align:center; padding:28px 48px 40px; color:#9ca3af; font-size:13px; }
+            </style></head><body><div class="container"><div class="gradient-bar"></div>
+              <div class="header"><img src="https://www.smartdeskcloud.com/SmartDesk_small.png" alt="SmartDesk"/></div>
+              <div class="content"><h1>¡Hola, %s!</h1>
+                <p>Has sido agregado al equipo de <strong>%s</strong> en SmartDesk con el rol de <strong>%s</strong>.</p>
+                <div class="credentials">
+                  <div class="row"><span class="label">Correo</span><span class="value">%s</span></div>
+                  <div class="row"><span class="label">Contraseña temporal</span><span class="value">%s</span></div>
+                </div>
+                <a href="%s" class="button">Ingresar a SmartDesk</a>
+                <div class="warning">Por seguridad, cambia esta contraseña después de iniciar sesión.</div>
+              </div><div class="footer">SmartDesk Cloud &copy; 2026<br>Este es un mensaje automático.</div>
+            </div></body></html>
+            """, escapeHtml(name), escapeHtml(companyName), roleLabel,
+                escapeHtml(email), escapeHtml(temporaryPassword), loginLink);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("from", "SmartDesk <" + resendFromEmail + ">");
+        requestBody.put("to", List.of(email));
+        requestBody.put("subject", "Has sido invitado a " + companyName + " en SmartDesk");
+        requestBody.put("html", htmlContent);
+
+        webClient.post().uri("/emails")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + resendApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestBody).retrieve().bodyToMono(String.class)
+                .doOnSuccess(response -> log.info("Invitación enviada a {}", email))
+                .doOnError(error -> log.error("Error enviando invitación a {}: {}", email, error.getMessage()))
+                .onErrorResume(e -> Mono.empty()).subscribe();
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
+    }
 }
