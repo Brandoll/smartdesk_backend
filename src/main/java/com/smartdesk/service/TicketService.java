@@ -62,6 +62,9 @@ public class TicketService {
     public TicketDTO getTicketById(UUID id) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+        if (!Boolean.TRUE.equals(ticket.getAiClassified())) {
+            aiClassifierService.classifyTicketAsync(id, TenantContext.getCurrentTenant());
+        }
         return mapToDTO(ticket);
     }
 
@@ -105,14 +108,10 @@ public class TicketService {
             }
         });
 
-        // Send real-time notification to admins and resolutors
-        java.util.Map<String, String> payload = new java.util.HashMap<>();
-        payload.put("type", "NEW_TICKET");
-        payload.put("ticketId", ticket.getId().toString());
-        payload.put("message", "Nuevo caso reportado: " + ticket.getTitle());
-        
-        notificationWebSocketHandler.notifyRolesInTenant(TenantContext.getCurrentTenant(), 
-            new String[]{"ADMIN_TENANT", "COLABORADOR_RESOLUTOR"}, payload);
+        notifyRolesAfterCommit(tenantId, new String[]{"ADMIN_TENANT", "COLABORADOR_RESOLUTOR"},
+                "NEW_TICKET", ticketId, "Nuevo caso reportado: " + ticket.getTitle());
+        notifyUserAfterCommit(tenantId, ticket.getClientId(), "TICKET_CREATED", ticketId,
+                "Tu caso fue creado correctamente");
 
         return mapToDTO(ticket);
     }
@@ -121,6 +120,7 @@ public class TicketService {
     public TicketDTO updateTicket(UUID id, TicketDTO dto, UUID updaterId) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+        String tenantId = TenantContext.getCurrentTenant();
 
         // Status change with validation
         if (dto.getStatus() != null && ticket.getStatus() != dto.getStatus()) {
@@ -137,14 +137,9 @@ public class TicketService {
                 ticket.setClosedAt(LocalDateTime.now());
             }
 
-            // Send real-time notification to the ticket creator
-            java.util.Map<String, String> payload = new java.util.HashMap<>();
-            payload.put("type", "STATUS_CHANGED");
-            payload.put("ticketId", ticket.getId().toString());
-            payload.put("message", "El estado de tu caso ha cambiado a " + dto.getStatus().name());
-            
-            notificationWebSocketHandler.notifyUser(TenantContext.getCurrentTenant(), 
-                ticket.getClientId().toString(), payload);
+            String message = "El estado del caso cambió a " + dto.getStatus().name();
+            notifyUserAfterCommit(tenantId, ticket.getClientId(), "STATUS_CHANGED", ticket.getId(), message);
+            notifyUserAfterCommit(tenantId, ticket.getAssignedToId(), "STATUS_CHANGED", ticket.getId(), message);
         }
 
         // Priority change
@@ -152,6 +147,9 @@ public class TicketService {
             saveHistory(ticket.getId(), updaterId, TicketHistory.EventType.PRIORITY_CHANGED,
                         ticket.getPriority().name(), dto.getPriority().name());
             ticket.setPriority(dto.getPriority());
+            String message = "La prioridad del caso cambió a " + dto.getPriority().name();
+            notifyUserAfterCommit(tenantId, ticket.getClientId(), "PRIORITY_CHANGED", ticket.getId(), message);
+            notifyUserAfterCommit(tenantId, ticket.getAssignedToId(), "PRIORITY_CHANGED", ticket.getId(), message);
         }
 
         // Area change (reclassification)
@@ -159,6 +157,9 @@ public class TicketService {
             saveHistory(ticket.getId(), updaterId, TicketHistory.EventType.AREA_CHANGED,
                         String.valueOf(ticket.getAreaId()), String.valueOf(dto.getAreaId()));
             ticket.setAreaId(dto.getAreaId());
+            String message = "El área del caso fue actualizada";
+            notifyUserAfterCommit(tenantId, ticket.getClientId(), "AREA_CHANGED", ticket.getId(), message);
+            notifyUserAfterCommit(tenantId, ticket.getAssignedToId(), "AREA_CHANGED", ticket.getId(), message);
         }
 
         // Assignment
@@ -166,6 +167,10 @@ public class TicketService {
             saveHistory(ticket.getId(), updaterId, TicketHistory.EventType.ASSIGNED,
                         String.valueOf(ticket.getAssignedToId()), String.valueOf(dto.getAssignedToId()));
             ticket.setAssignedToId(dto.getAssignedToId());
+            notifyUserAfterCommit(tenantId, ticket.getClientId(), "ASSIGNED", ticket.getId(),
+                    "Se asignó un resolutor a tu caso");
+            notifyUserAfterCommit(tenantId, dto.getAssignedToId(), "ASSIGNED", ticket.getId(),
+                    "Te han asignado un nuevo caso: " + ticket.getTitle());
         }
 
         // Resolution comment
@@ -238,6 +243,40 @@ public class TicketService {
         history.setOldValue(oldVal);
         history.setNewValue(newVal);
         ticketHistoryRepository.save(history);
+    }
+
+    private void notifyUserAfterCommit(String tenantId, UUID userId, String type,
+                                       UUID ticketId, String message) {
+        if (userId == null) return;
+        runAfterCommit(() -> notificationWebSocketHandler.notifyUser(
+                tenantId, userId.toString(), notificationPayload(type, ticketId, message)));
+    }
+
+    private void notifyRolesAfterCommit(String tenantId, String[] roles, String type,
+                                        UUID ticketId, String message) {
+        runAfterCommit(() -> notificationWebSocketHandler.notifyRolesInTenant(
+                tenantId, roles, notificationPayload(type, ticketId, message)));
+    }
+
+    private java.util.Map<String, String> notificationPayload(String type, UUID ticketId, String message) {
+        return java.util.Map.of(
+                "type", type,
+                "ticketId", ticketId.toString(),
+                "message", message
+        );
+    }
+
+    private void runAfterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 
     private TicketDTO mapToDTO(Ticket ticket) {

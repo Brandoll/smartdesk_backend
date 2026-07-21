@@ -15,6 +15,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -24,6 +26,7 @@ public class AIClassifierService {
     private final TicketRepository ticketRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
     private final NotificationWebSocketHandler notificationWebSocketHandler;
+    private final Set<UUID> classificationsInProgress = ConcurrentHashMap.newKeySet();
 
     @Value("${gemini.api.key}")
     private String geminiApiKey;
@@ -42,6 +45,7 @@ public class AIClassifierService {
 
     @Async
     public void classifyTicketAsync(UUID ticketId, String tenantId) {
+        if (!classificationsInProgress.add(ticketId)) return;
         TenantContext.setCurrentTenant(tenantId);
         try {
             Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
@@ -62,7 +66,8 @@ public class AIClassifierService {
                         Map.of("parts", List.of(
                                 Map.of("text", prompt)
                         ))
-                )
+                ),
+                "generationConfig", Map.of("responseMimeType", "application/json")
         );
 
             String response = webClient.post()
@@ -121,9 +126,19 @@ public class AIClassifierService {
             );
             notificationWebSocketHandler.notifyUser(
                     tenantId, ticket.getClientId().toString(), notification);
+            notificationWebSocketHandler.notifyRolesInTenant(
+                    tenantId,
+                    new String[]{"ADMIN_TENANT", "COLABORADOR_RESOLUTOR"},
+                    notification);
         } catch (Exception e) {
             log.error("AI classification error for ticket {}: {}", ticketId, e.getMessage(), e);
+            notificationWebSocketHandler.notifyRolesInTenant(
+                    tenantId,
+                    new String[]{"ADMIN_TENANT"},
+                    Map.of("type", "AI_FAILED", "ticketId", ticketId.toString(),
+                            "message", "No se pudo generar la sugerencia de IA; se reintentará al abrir el caso"));
         } finally {
+            classificationsInProgress.remove(ticketId);
             TenantContext.clear();
         }
     }
