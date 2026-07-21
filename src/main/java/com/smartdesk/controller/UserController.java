@@ -15,6 +15,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users")
+@PreAuthorize("hasRole('ADMIN_TENANT')")
 @Tag(name = "Users", description = "Endpoints para la gestión de Usuarios del tenant")
 public class UserController {
 
